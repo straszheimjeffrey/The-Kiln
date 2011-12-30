@@ -5,25 +5,7 @@
   (use slingshot.slingshot)
   (require [clojure.walk :as walk]))
 
-(comment
 
-  ;; A kiln
-
-  {:vals (ref {})
-   :needs-cleanup (ref [])}
-
-  ;; A clay
-
-  {:id 'some-id
-   :name 'some-symbolic-name
-   :fun ... ; executable
-   :cleanup ... ; or...
-   :cleanup-success ...
-   :cleanup-failure ...
-   :pre-compute [...]
-   :extra-data { }
-   }
-  )
 
 (defn new-kiln
   "Return a blank kiln ready to stoke and fire."
@@ -78,12 +60,19 @@
          (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
        (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
 
+(defn clay-fired?
+  "Has this clay been fired?"
+  [kiln clay]
+  {:pre [(::kiln? kiln)
+         (or (::clay? clay) (::coal? clay))]}
+  (contains? @(:vals kiln) (:id clay)))
+
 (defn- cleanup
   [kiln key]
   (let [kiln (assoc kiln ::cleanup? true)]
     (doseq [clay @(:needs-cleanup kiln)]
       (when-let [fun (get clay key)]
-        (fun kiln)))))
+        (fun kiln (fire kiln clay))))))
       
 (defn cleanup-kiln-success
   "Run the cleanup and cleanup-success routines for each needed clay."
@@ -96,6 +85,8 @@
   [kiln]
   (cleanup kiln :cleanup)
   (cleanup kiln :cleanup-failure))
+
+
 
 ;; Building Clays
 
@@ -115,24 +106,27 @@
      [stuff data])))
 
 (defn- build-env-fun
-  [forms]
-  (let [clay-sym (gensym "env")
+  [forms clay-sym other-args]
+  (let [clay-sym (or clay-sym (gensym "env"))
         replace-fire (fn [f]
                        (if (and (seq? f)
                                 (= (first f) '??))
                          (list 'fire clay-sym (second f))
                          f))]
-    (list* 'fn
-           [clay-sym]
-           (walk/prewalk replace-fire forms))))
+    `(fn
+       ~(vec (list* clay-sym other-args))
+       ~@(walk/prewalk replace-fire forms))))
 
 (defmacro clay
   "Builds a clay object"
   [& clay]
   (let [[rest data-map] (get-pairs clay)
+        env-id (or (:kiln data-map) (gensym "env"))
         build-if-present (fn [data key]
                            (if-let [form (get data key)]
-                             (assoc data key (build-env-fun (list form)))
+                             (assoc data key (build-env-fun (list form)
+                                                            env-id
+                                                            ['?self]))
                              data))
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
@@ -142,7 +136,7 @@
         (set-symb :id id)
         (set-symb :name id)
         (assoc ::clay? true)
-        (assoc :fun (build-env-fun rest))
+        (assoc :fun (build-env-fun rest env-id nil))
         (build-if-present :cleanup)
         (build-if-present :cleanup-success)
         (build-if-present :cleanup-failure))))

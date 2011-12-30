@@ -40,12 +40,13 @@
         store (atom [])]
     (stoke-coal k coal-1 1)
     (stoke-coal k coal-2 store)
+    (is (not (clay-fired? k fred)))
     (is (= (fire k fred) 6))
     (fire k mary!)
     (is (= @store [6]))
     (fire k sally!)
     (is (= @store [6 6]))
-    (is (= (get @(:vals k) (:id bob)) 3)) ; did sally! compute bob?
+    (is (clay-fired? k bob))
     (cleanup-kiln-success k)
     (is (= @store []))))
 
@@ -74,6 +75,15 @@
     (defclay yyy)
     (is (= qqq-id (:id qqq)))
     (is (= yyy-id (:id yyy)))))
+
+(deftest test-anaphoric-kiln
+  (let [k (new-kiln)
+        store (atom [])
+        bob! (clay :kiln qqq
+                   (swap! (?? coal-2) conj qqq))]
+    (stoke-coal k coal-2 store)
+    (fire k bob!)
+    (is (= @store [k]))))
 
   
 (comment
