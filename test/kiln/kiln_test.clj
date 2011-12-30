@@ -135,6 +135,32 @@
               (is (= clay loopy-clay))
               (is (= kiln k))
               :exception-thrown))))))
+
+(deftest basic-glaze-test
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (glaze :name b
+                 :operation (do
+                              (swap! store conj ?clay)
+                              (?next)))
+        c (glaze :kiln fred
+                 :name c
+                 :operation (do
+                              (swap! store conj fred)
+                              (?next)))
+        d (clay :glaze [b c]
+                :value (+ (?? a) 1))
+        e (glaze :name e
+                 :operation :override)
+        f (clay :glaze [b e c]
+                :value :never-happen)]
+    (stoke-coal k a 0)
+    (is (= (fire k d) 1))
+    (is (= @store [d k]))
+    (is (= (fire k f) :override))
+    (is (= @store [d k f]))))
+           
   
 (comment
 
