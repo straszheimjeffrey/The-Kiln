@@ -47,6 +47,8 @@
     (is (= @store [6]))
     (fire k sally!)
     (is (= @store [6 6]))
+    (fire k sally!)
+    (is (= @store [6 6])) ; idempotent
     (is (clay-fired? k bob))
     (cleanup-kiln-success k)
     (is (= @store []))))
