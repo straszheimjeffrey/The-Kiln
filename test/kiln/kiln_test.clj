@@ -30,7 +30,7 @@
 
 (defclay sally!
   "Double coal-2"
-  :pre-compute [bob]
+  :pre-fire [bob]
   :cleanup (swap! (?? coal-2) (constantly []))
   (swap! (?? coal-2) (fn [k] (vec (concat k k)))))
   

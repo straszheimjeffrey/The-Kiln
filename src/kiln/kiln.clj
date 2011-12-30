@@ -52,7 +52,7 @@
      :otherwise ; gotta get it.
      (if-not (::cleanup? kiln)
        (if (::clay? clay)
-         (do (when-let [pres (:pre-compute clay)]
+         (do (when-let [pres (if-let [prf (:pre-fire clay)] (prf) nil)]
                (doseq [pre pres] (fire kiln pre)))
              (let [result (run-clay kiln clay)]
                (dosync
@@ -131,6 +131,10 @@
                                                             env-id
                                                             ['?self]))
                              data))
+        wrap-if-present (fn [data key]
+                          (if-let [form (get data key)]
+                            (assoc data key `(fn [] ~form))
+                            data))
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
                      (assoc data key (list 'quote symb))))
@@ -140,6 +144,7 @@
         (set-symb :name id)
         (assoc ::clay? true)
         (assoc :fun (build-env-fun rest env-id nil))
+        (wrap-if-present :pre-fire)
         (build-if-present :cleanup)
         (build-if-present :cleanup-success)
         (build-if-present :cleanup-failure))))
