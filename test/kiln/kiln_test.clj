@@ -77,6 +77,16 @@
     (cleanup-kiln-failure k2)
     (is (= (set @store) #{1 3}))))
 
+(deftest test-cleanup-self
+  (let [k (new-kiln)
+        store (atom [])
+        fred (clay :value 55
+                   :cleanup (swap! (?? coal-2) conj (+ ?self 10)))]
+    (stoke-coal k coal-2 store)
+    (fire k fred)
+    (cleanup-kiln-success k)
+    (is (= @store [65]))))
+
 (defcoal qqq)
 (defclay yyy)
 
