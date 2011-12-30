@@ -49,6 +49,33 @@
     (cleanup-kiln-success k)
     (is (= @store []))))
 
+(deftest test-cleanups
+  (let [k (new-kiln)
+        store (atom [])
+        one (clay :cleanup (swap! (?? coal-2) conj 1) (quote :fred))
+        two (clay :cleanup-success (swap! (?? coal-2) conj 2) (quote :fred))
+        three (clay :cleanup-failure (swap! (?? coal-2) conj 3) (quote :fred))]
+    (stoke-coal k coal-2 store)
+    (fire k one)
+    (fire k two)
+    (fire k three)
+    (cleanup-kiln-success k)
+    (is (= (set @store) #{1 2}))
+    (cleanup-kiln-failure k)
+    (is (= (set @store) #{1 2 3}))))
+
+(defcoal qqq)
+(defclay yyy)
+
+(deftest test-id-persistant
+  (let [qqq-id (:id qqq)
+        yyy-id (:id yyy)]
+    (defcoal qqq)
+    (defclay yyy)
+    (is (= qqq-id (:id qqq)))
+    (is (= yyy-id (:id yyy)))))
+
+  
 (comment
 
 (run-tests)

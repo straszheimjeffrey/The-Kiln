@@ -152,16 +152,21 @@
   [name & stuff]
   (let [[comment body] (if (string? (first stuff))
                          [(first stuff) (rest stuff)]
-                         [nil stuff])]
+                         [nil stuff])
+        cur-var (ns-resolve *ns* name)
+        id (if cur-var (:id @cur-var) nil)]
     `(def ~(with-meta name {:doc comment})
-       (clay :name ~name ~@body))))
+       (clay :name ~name :id ~id ~@body))))
 
 (defmacro defcoal
   "Define a coal (source clay) at top level."
   [name & comment]
-  (let [comment (if (string? (first comment)) (first comment) nil)]
+  (let [comment (if (string? (first comment)) (first comment) nil)
+        cur-var (ns-resolve *ns* name)
+        id (if cur-var (:id @cur-var) nil)
+        id (or id (gensym "coal-"))]
     `(def ~(with-meta name {:doc comment})
-       {:id (quote ~(gensym "coal-"))
+       {:id (quote ~id)
         :name (quote ~name)
         ::coal? true})))
 
