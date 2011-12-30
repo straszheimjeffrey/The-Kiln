@@ -115,7 +115,7 @@
      [stuff data])))
 
 (defn- build-env-fun
-  [form]
+  [forms]
   (let [clay-sym (gensym "env")
         replace-fire (fn [f]
                        (if (and (seq? f)
@@ -124,7 +124,7 @@
                          f))]
     (list* 'fn
            [clay-sym]
-           (walk/prewalk replace-fire form))))
+           (walk/prewalk replace-fire forms))))
 
 (defmacro clay
   "Builds a clay object"
@@ -132,7 +132,7 @@
   (let [[rest data-map] (get-pairs clay)
         build-if-present (fn [data key]
                            (if-let [form (get data key)]
-                             (assoc data key (build-env-fun form))
+                             (assoc data key (build-env-fun (list form)))
                              data))
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
@@ -154,7 +154,7 @@
                          [(first stuff) (rest stuff)]
                          [nil stuff])]
     `(def ~(with-meta name {:doc comment})
-       (clay :name (quote ~name) ~@stuff))))
+       (clay :name ~name ~@body))))
 
 (defmacro defcoal
   "Define a coal (source clay) at top level."
