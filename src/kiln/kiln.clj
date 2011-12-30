@@ -14,10 +14,6 @@
    :vals (ref {})
    :needs-cleanup (ref [])})
 
-(defn- exec-in-env
-  [kiln fun]
-  (fun kiln))
-
 (defn stoke-coal
   "Within the kiln, set the coal to the desired value."
   [kiln coal val]
@@ -51,7 +47,7 @@
          (do (when-let [pres (:pre-compute clay)]
                (doseq [pre pres] (fire kiln pre)))
              (dosync (alter (:vals kiln) assoc (:id clay) ::running))
-             (let [result (exec-in-env kiln (:fun clay))]
+             (let [result ((:fun clay) kiln)]
                (dosync
                 (alter (:vals kiln) assoc (:id clay) result)
                 (when (has-cleanup? clay)
