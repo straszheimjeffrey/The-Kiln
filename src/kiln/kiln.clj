@@ -109,7 +109,7 @@
         replace-fire (fn [f]
                        (if (and (seq? f)
                                 (= (first f) '??))
-                         (list 'fire clay-sym (second f))
+                         `(fire ~clay-sym ~(second f))
                          f))]
     `(fn
        ~(vec (list* clay-sym other-args))
@@ -176,7 +176,6 @@
      :id (list 'quote id)
      :name (list 'quote (or (:name data-map) id))}))
 
-
 (defmacro defcoal
   "Define a coal (source clay) at top level."
   [name & comment]
@@ -187,16 +186,8 @@
     `(def ~(with-meta name {:doc comment})
        (coal :name ~name :id ~id))))
 
+
 (comment
-
-(def k (new-kiln))
-(defcoal fred)
-(defclay mary (+ (?? fred) 5))
-(defclay joan (+ (?? mary) 2))
-
-(stoke-coal k fred 3)
-(prn (fire k mary))
-(prn (fire k joan))
     
 )
 
