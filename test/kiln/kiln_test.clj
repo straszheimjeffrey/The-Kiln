@@ -1,5 +1,6 @@
 (ns kiln.kiln-test
   (use clojure.test)
+  (use slingshot.slingshot)
   (use kiln.kiln))
 
 (deftest test-new-kiln
@@ -85,6 +86,18 @@
     (fire k bob!)
     (is (= @store [k]))))
 
+(declare loopy-clay)
+(defclay loopy-clay (?? loopy-clay))
+  
+(deftest test-loopy-clay
+  (let [k (new-kiln)]
+    (is (= :exception-thrown
+           (try+
+            (fire k loopy-clay)
+            (catch [:type :kiln-loop] {:keys [clay kiln]}
+              (is (= clay loopy-clay))
+              (is (= kiln k))
+              :exception-thrown))))))
   
 (comment
 

@@ -28,6 +28,14 @@
       (:cleanup-success clay)
       (:cleanup-failure clay)))
 
+(defn- run-clay
+  [kiln clay]
+  (try
+    (dosync (alter (:vals kiln) assoc (:id clay) ::running))
+    ((:fun clay) kiln)
+    (finally
+     (dosync (alter (:vals kiln) assoc (:id clay) nil)))))
+
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
   [kiln clay] ; the clay can be a coal
@@ -46,8 +54,7 @@
        (if (::clay? clay)
          (do (when-let [pres (:pre-compute clay)]
                (doseq [pre pres] (fire kiln pre)))
-             (dosync (alter (:vals kiln) assoc (:id clay) ::running))
-             (let [result ((:fun clay) kiln)]
+             (let [result (run-clay kiln clay)]
                (dosync
                 (alter (:vals kiln) assoc (:id clay) result)
                 (when (has-cleanup? clay)

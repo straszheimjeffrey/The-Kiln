@@ -53,7 +53,7 @@ Here are some specific complexity issues that I've found:
   request.
 
   2. Often the data you need in one part of the control flow isn't
-  visible because it is created and consumed elsehwere.
+  visible because it is created and consumed elsewhere.
 
   3. What you need to compute tends to not change much, but how you
   compute it often does. That is, new bits of data become relavent,
