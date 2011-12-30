@@ -68,14 +68,14 @@
     (fire k1 two)
     (fire k1 three)
     (cleanup-kiln-success k1)
-    (is (= (set @store) #{1 2}))
+    (is (= @store [2 1]))
     (swap! store (constantly []))
     (stoke-coal k2 coal-2 store)
     (fire k2 one)
     (fire k2 two)
     (fire k2 three)
     (cleanup-kiln-failure k2)
-    (is (= (set @store) #{1 3}))))
+    (is (= @store [3 1]))))
 
 (deftest test-cleanup-self
   (let [k (new-kiln)

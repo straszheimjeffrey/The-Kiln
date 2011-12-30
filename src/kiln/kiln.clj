@@ -72,20 +72,21 @@
   (contains? @(:vals kiln) (:id clay)))
 
 (defn- cleanup
-  [kiln key]
+  [kiln keys]
   (let [kiln (assoc kiln ::cleanup? true)]
     (doseq [clay @(:needs-cleanup kiln)]
-      (when-let [fun (get clay key)]
+      (let [funs (keep #(get clay %) keys)]
         (try
-          (fun kiln (fire kiln clay))
+          (let [result (fire kiln clay)]
+            (doseq [fun funs]
+              (fun kiln result)))
           (catch Exception e
             (dosync (alter (:cleanup-exceptions kiln) conj e))))))))
       
 (defn- cleanup-kiln-which
   [kiln which]
   {:pre [(::kiln? kiln)]}
-  (cleanup kiln :cleanup)
-  (cleanup kiln which)
+  (cleanup kiln [:cleanup which])
   (dosync (ref-set (:needs-cleanup kiln) []))
   (if-not (empty? @(:cleanup-exceptions kiln))
     (throw+ {:type :kiln-cleanup-exception
