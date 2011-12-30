@@ -123,8 +123,10 @@
     (fire k bob!)
     (is (= @store [k]))))
 
-(declare loopy-clay)
+(declare loopy-clay embrace)
 (defclay loopy-clay :value (?? loopy-clay))
+(defclay deadly :value (?? embrace))
+(defclay embrace :value (?? deadly))
   
 (deftest test-loopy-clay
   (let [k (new-kiln)]
@@ -134,7 +136,10 @@
             (catch [:type :kiln-loop] {:keys [clay kiln]}
               (is (= clay loopy-clay))
               (is (= kiln k))
-              :exception-thrown))))))
+              :exception-thrown))))
+    (is (try+ (fire k deadly), false
+              (catch [:type :kiln-loop] _ true))
+        "detects mutual, as well as self-recursion")))
   
 (comment
 
