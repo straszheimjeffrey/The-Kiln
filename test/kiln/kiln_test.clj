@@ -43,6 +43,7 @@
     (stoke-coal k coal-2 store)
     (is (not (clay-fired? k fred)))
     (is (= (fire k fred) 6))
+    (is (= (fire k fred) 6) "value saved")
     (fire k mary!)
     (is (= @store [6]))
     (fire k sally!)
