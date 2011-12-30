@@ -12,7 +12,8 @@
   []
   {::kiln? true
    :vals (ref {})
-   :needs-cleanup (ref [])})
+   :needs-cleanup (ref nil)
+   :cleanup-exceptions (ref [])})
 
 (defn stoke-coal
   "Within the kiln, set the coal to the desired value."
@@ -75,19 +76,31 @@
   (let [kiln (assoc kiln ::cleanup? true)]
     (doseq [clay @(:needs-cleanup kiln)]
       (when-let [fun (get clay key)]
-        (fun kiln (fire kiln clay))))))
+        (try
+          (fun kiln (fire kiln clay))
+          (catch Exception e
+            (dosync (alter (:cleanup-exceptions kiln) conj e))))))))
       
+(defn- cleanup-kiln-which
+  [kiln which]
+  {:pre [(::kiln? kiln)]}
+  (cleanup kiln :cleanup)
+  (cleanup kiln which)
+  (dosync (ref-set (:needs-cleanup kiln) []))
+  (if-not (empty? @(:cleanup-exceptions kiln))
+    (throw+ {:type :kiln-cleanup-exception
+             :kiln kiln
+             :exceptions @(:cleanup-exceptions kiln)})))
+
 (defn cleanup-kiln-success
   "Run the cleanup and cleanup-success routines for each needed clay."
   [kiln]
-  (cleanup kiln :cleanup)
-  (cleanup kiln :cleanup-success))
-
+  (cleanup-kiln-which kiln :cleanup-success))
+                    
 (defn cleanup-kiln-failure
   "Run the cleanup and cleanup-failure routines for each needed clay."
   [kiln]
-  (cleanup kiln :cleanup)
-  (cleanup kiln :cleanup-failure))
+  (cleanup-kiln-which kiln :cleanup-failure))
 
 (defn clay-extra-data
   "Return the extra data stored in a clay."
@@ -125,12 +138,12 @@
   [& clay]
   (let [data-map (apply hash-map clay)
         env-id (or (:kiln data-map) (gensym "env"))
-        build-if-present (fn [data key]
-                           (if-let [form (get data key)]
-                             (assoc data key (build-env-fun form
-                                                            env-id
-                                                            ['?self]))
-                             data))
+        build-cleanup (fn [data key]
+                        (if-let [form (get data key)]
+                          (assoc data key (build-env-fun form
+                                                         env-id
+                                                         ['?self]))
+                          data))
         wrap-if-present (fn [data key]
                           (if-let [form (get data key)]
                             (assoc data key `(fn [] ~form))
@@ -148,9 +161,9 @@
         (assoc :fun (build-env-fun (:value data-map) env-id nil))
         (dissoc :value)
         (wrap-if-present :pre-fire)
-        (build-if-present :cleanup)
-        (build-if-present :cleanup-success)
-        (build-if-present :cleanup-failure))))
+        (build-cleanup :cleanup)
+        (build-cleanup :cleanup-success)
+        (build-cleanup :cleanup-failure))))
 
 (defmacro defclay
   "Define a clay at the top level, ensure the name is set correctly."
