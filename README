@@ -1,10 +1,120 @@
-# kiln
+# The Kiln
 
-FIXME: write description
+The Kiln is designed to make large complex functions easier to
+write. By "large and complex", I mean things such as web applications,
+where you do not compute a single, simple result for a well-defined
+input, but instead a very complex set of outputs along with
+side-effects.
+
+Consider a standard storefront application. When the user adds an item
+to the cart, the system must do more than just that one database
+operation, and it must return more than "success." No, in a real
+webapp, we get steps that look more like this:
+
+* Check a variety of security parameters
+
+* Validate the input
+
+* Perform the update to the database
+
+* Query the database to get the new cart
+
+* Iterate through various "user widgets" and update their state, such
+  as ad banners, content for the various side columns, twitter
+  updates, etc.
+
+* Add any analytics controls to the page
+
+* Pick a template, render it
+
+And so on. And this only counts the user-visible business logic. A
+complex webapp might also have a variety of logging and monitoring
+code that must be run on each request.
+
+In my experience writing webapps, the size of the application seems to
+grow linearly with time, as product managers dream up more features to
+add and more complex ways for them to interact. Such as, "Hey, now
+that you've added a reward points system, can we hook it into the
+product recomendation system, so that the products with eligible
+bonuses appear higher?"
+
+The list of product demands will go on. The complexity of the
+application will spiral out of control.
+
+Here are some specific complexity issues that I've found:
+
+* For each request, there is a large set of data that needs to be
+  recomputed, such as (perhaps) as user-id, his session, a database
+  connection, validation parameters, logging parameters, search
+  results, other kinds of results, and so on. I've found two things
+  true about this mass of data:
+
+  1. Most of these items are computed zero or one times for each
+  request.
+
+  2. Often the data you need in one part of the control flow isn't
+  visible because it is created and consumed elsehwere.
+
+  3. What you need to compute tends to not change much, but how you
+  compute it often does. That is, new bits of data become relavent,
+  reqiring ever-growing argument lists (or worse, the heavy dependance
+  of dynamic scope).
+
+* The classic problem, "I need this here, but I have to thread it through a
+  dozen functions to get it," becomes legion. Dynamic binding can
+  help, but it creates its own maintainance nightmare.
+
+* Business logic gets mixed up with security, logging, analytics,
+  etc. Aspect oriented programming can help, but creates its own
+  maintainance headaches as a never-ending stream of new "aspect"
+  types gizmos are added to the application to handle the needed
+  control.
+
+* Control flow gets really tricky and non-obvious.
+
+In theory lots of stong engineering vision, constant refactoring, and
+an unearthly level of insight at the start can avoid many of these
+problems. However, in the real world, I've never been that lucky. For
+me, real-world, competitive applications become a big ball of mud.
+
+The Kiln is designed to cook up that big ball of mud into something
+manageable. It is built around these principles:
+
+* No dynamic scope! (It will allow you to work with libraries that
+  require dynamic scoping, but no adding your own.)
+
+* The key values you need to perform a request are computed according
+  to top-level named cells (called "clay"). These cells know what
+  other values (other clays) they need.
+
+* Clays are computed lazily.
+
+* Clays know how to cleanup after themselves. If your database
+  connection is a clay, it will get closed at the end of the request.
+
+* No aspects. Clays can be wrapped with "glaze", which replaces the
+  needs for aspects. Unlike aspects, glazes are visible where the clay
+  is defined.
+
+* Clays should off-load their computation to normal
+  functions. However, those functions should be as simple as possible,
+  and do exactly one thing. (Let all the crazy, ugly dependencies live
+  in the kiln.)
+
+* Clays are evaluated inside of a first-class environment (called a
+  "kiln"). You can create mulitple kilns and pass them around as
+  needed. (In a webapp, the idea is you create one kiln per request.)
+
+
 
 ## Usage
 
 FIXME: write
+
+## TODO
+
+Arguments to clay. Dosync handling rules for clay.
+Glaze. Dynamic Glaze.
 
 ## License
 
