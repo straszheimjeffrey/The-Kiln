@@ -106,7 +106,7 @@
 (defcoal qqq)
 (defclay yyy)
 
-(deftest test-id-persistant
+(deftest test-id-persistent
   (let [qqq-id (:id qqq)
         yyy-id (:id yyy)]
     (defcoal qqq)
