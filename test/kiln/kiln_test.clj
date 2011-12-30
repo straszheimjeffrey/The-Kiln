@@ -18,21 +18,21 @@
 
 (defclay fred
   "coal-1 plus 5"
-  (+ (?? coal-1) 5))
+  :value (+ (?? coal-1) 5))
 
 (defclay mary!
   "Appends fred to coal-2"
-  (swap! (?? coal-2) conj (?? fred)))
+  :value (swap! (?? coal-2) conj (?? fred)))
 
 (defclay bob
   "coal-1 plus 2"
-  (+ (?? coal-1) 2))
+  :value (+ (?? coal-1) 2))
 
 (defclay sally!
   "Double coal-2"
   :pre-fire [bob]
   :cleanup (swap! (?? coal-2) (constantly []))
-  (swap! (?? coal-2) (fn [k] (vec (concat k k)))))
+  :value (swap! (?? coal-2) (fn [k] (vec (concat k k)))))
   
 ;; A very basic test
 
@@ -56,9 +56,12 @@
 (deftest test-cleanups
   (let [k (new-kiln)
         store (atom [])
-        one (clay :cleanup (swap! (?? coal-2) conj 1) (quote :fred))
-        two (clay :cleanup-success (swap! (?? coal-2) conj 2) (quote :fred))
-        three (clay :cleanup-failure (swap! (?? coal-2) conj 3) (quote :fred))]
+        one (clay :cleanup (swap! (?? coal-2) conj 1)
+                  :value :fred)
+        two (clay :cleanup-success (swap! (?? coal-2) conj 2)
+                  :value :fred)
+        three (clay :cleanup-failure (swap! (?? coal-2) conj 3)
+                    :value :fred)]
     (stoke-coal k coal-2 store)
     (fire k one)
     (fire k two)
@@ -83,13 +86,13 @@
   (let [k (new-kiln)
         store (atom [])
         bob! (clay :kiln qqq
-                   (swap! (?? coal-2) conj qqq))]
+                   :value (swap! (?? coal-2) conj qqq))]
     (stoke-coal k coal-2 store)
     (fire k bob!)
     (is (= @store [k]))))
 
 (declare loopy-clay)
-(defclay loopy-clay (?? loopy-clay))
+(defclay loopy-clay :value (?? loopy-clay))
   
 (deftest test-loopy-clay
   (let [k (new-kiln)]

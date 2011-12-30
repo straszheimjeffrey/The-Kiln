@@ -89,27 +89,22 @@
   (cleanup kiln :cleanup)
   (cleanup kiln :cleanup-failure))
 
+(defn clay-extra-data
+  "Return the extra data stored in a clay."
+  [clay]
+  {:pre [(::clay? clay)]}
+  (:extra clay))
 
 
 ;; Building Clays
 
-(defn- get-pairs
-  [stuff]
-  (loop [stuff stuff
-         data {}]
-    (cond
-     (nil? stuff)
-     [nil data]
-
-     (keyword? (first stuff))
-     (recur (drop 2 stuff)
-            (assoc data (first stuff) (second stuff)))
-
-     :otherwise
-     [stuff data])))
+(defn- bad-keys
+  [map allowed-fn]
+  (let [result (filter (comp not allowed-fn) (keys map))]
+    (if (empty? result) nil result)))
 
 (defn- build-env-fun
-  [forms clay-sym other-args]
+  [form clay-sym other-args]
   (let [clay-sym (or clay-sym (gensym "env"))
         replace-fire (fn [f]
                        (if (and (seq? f)
@@ -118,16 +113,23 @@
                          f))]
     `(fn
        ~(vec (list* clay-sym other-args))
-       ~@(walk/prewalk replace-fire forms))))
+       ~(walk/prewalk replace-fire form))))
+
+(def ^:private allowed-clay-kws #{:id :name :value
+                                 :pre-fire :kiln
+                                 :cleanup :cleanup-success :cleanup-failure
+                                 :extra})
 
 (defmacro clay
   "Builds a clay object"
   [& clay]
-  (let [[rest data-map] (get-pairs clay)
+  (let [data-map (apply hash-map clay)
+        _ (when-let [bads (bad-keys data-map allowed-clay-kws)]
+            (throw+ {:type :kiln-bad-key :keys bads :clay clay}))
         env-id (or (:kiln data-map) (gensym "env"))
         build-if-present (fn [data key]
                            (if-let [form (get data key)]
-                             (assoc data key (build-env-fun (list form)
+                             (assoc data key (build-env-fun form
                                                             env-id
                                                             ['?self]))
                              data))
@@ -143,7 +145,8 @@
         (set-symb :id id)
         (set-symb :name id)
         (assoc ::clay? true)
-        (assoc :fun (build-env-fun rest env-id nil))
+        (assoc :fun (build-env-fun (:value data-map) env-id nil))
+        (dissoc :value)
         (wrap-if-present :pre-fire)
         (build-if-present :cleanup)
         (build-if-present :cleanup-success)
