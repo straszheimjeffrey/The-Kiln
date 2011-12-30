@@ -35,7 +35,7 @@
   [kiln fun]
   (fun kiln))
 
-(defn stoak-coal
+(defn stoke-coal
   "Within the kiln, set the coal to the desired value."
   [kiln coal val]
   {:pre [(::kiln? kiln)
@@ -146,9 +146,10 @@
 (defclay mary (+ (?? fred) 5))
 (defclay joan (+ (?? mary) 2))
 
-(stoak-coal k fred 3)
+(stoke-coal k fred 3)
 (prn (fire k mary))
 (prn (fire k joan))
     
+)
 
 ;; End of file
