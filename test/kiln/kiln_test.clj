@@ -87,6 +87,22 @@
     (cleanup-kiln-success k)
     (is (= @store [65]))))
 
+(deftest test-cleanup-exceptions
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (clay :value (+ (?? a) 5)
+                :cleanup (throw+ {:type :hi! :value :bob}))
+        c (clay :value (+ (?? b) 5)
+                :cleanup (throw+ {:type :hi! :value :mary}))]
+    (stoke-coal k a 0)
+    (fire k c)
+    (is (= [:mary :bob]
+           (try+
+            (cleanup-kiln-success k)
+            (catch [:type :kiln-cleanup-exception] {:keys [exceptions]}
+              (map (fn [e] (-> e .getData :object :value)) exceptions)))))))
+
 (defcoal qqq)
 (defclay yyy)
 
