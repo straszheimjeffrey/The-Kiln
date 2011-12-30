@@ -2,6 +2,7 @@
     ^{:doc "A new evuation strategy for complex computations."
       :author "Jeffrey Straszheim"}
   kiln.core
+  (use slingshot.slingshot)
   (require [clojure.walk :as walk]))
 
 (comment
@@ -9,7 +10,7 @@
   ;; A kiln
 
   {:vals (ref {})
-   :so-far (ref [])}
+   :needs-cleanup (ref [])}
 
   ;; A clay
 
@@ -23,14 +24,54 @@
    }
   )
 
+(defn new-kiln
+  "Return a blank kiln ready to stoke and fire."
+  []
+  {::kiln? true
+   :vals (ref {})
+   :needs-cleanup (ref [])})
+
 (defn- exec-in-env
   [kiln fun]
-  :nothing-yet)
+  (fun kiln))
+
+(defn stoak-coal
+  "Within the kiln, set the coal to the desired value."
+  [kiln coal val]
+  {:pre [(::kiln? kiln)
+         (::coal? coal)]}
+  (dosync
+   (alter (:vals kiln) assoc (:id coal) val)))
+
+(defn- has-cleanup?
+  [clay]
+  (or (:cleanup clay)
+      (:cleanup-success clay)
+      (:cleanup-failure clay)))
 
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
-  [kiln clay]
-  :nothing-yet)
+  [kiln clay] ; the clay can be a coal
+  {:pre [(::kiln? kiln)
+         (or (::clay? clay) (::coal? clay))]}
+  (let [value (get @(:vals kiln) (:id clay) ::value-of-clay-not-found)]
+    (cond
+     (= value ::running) ; uh-oh, we have a loop.
+     (throw+ {:type :kiln-loop :clay clay})
+
+     (not= value ::value-of-clay-not-found) ; yay! it's there!
+     value
+
+     :otherwise ; gotta get it.
+     (if (::clay? clay)
+       (do (dosync (alter (:vals kiln) assoc (:id clay) ::running))
+           (let [result (exec-in-env kiln (:fun clay))]
+             (dosync
+              (alter (:vals kiln) assoc (:id clay) result)
+              (when (has-cleanup? clay)
+                (alter (:needs-cleanup kiln) conj clay)))
+             result))
+       (throw+ {:type :kiln-absent-coal :coal clay})))))
 
 (defn- get-pairs
   [stuff]
@@ -71,15 +112,43 @@
                    (let [symb (or (get data key) val)]
                      (assoc data key (list 'quote symb))))
         id (or (:id clay) (gensym "clay-"))]
-    (prn rest)
-    (prn (build-env-fun rest))
     (-> data-map
         (set-symb :id id)
         (set-symb :name id)
+        (assoc ::clay? true)
         (assoc :fun (build-env-fun rest))
         (build-if-present :cleanup)
         (build-if-present :cleanup-success)
         (build-if-present :cleanup-failure))))
+
+(defmacro defclay
+  "Define a clay at the top level, ensure the name is set correctly."
+  [name & stuff]
+  (let [[comment body] (if (string? (first stuff))
+                         [(first stuff) (rest stuff)]
+                         [nil stuff])]
+    `(def ~(with-meta name {:doc comment})
+       (clay :name (quote ~name) ~@stuff))))
+
+(defmacro defcoal
+  "Define a coal (source clay) at top level."
+  [name & comment]
+  (let [comment (if (string? (first comment)) (first comment) nil)]
+    `(def ~(with-meta name {:doc comment})
+       {:id (quote ~(gensym "coal-"))
+        :name (quote ~name)
+        ::coal? true})))
+
+(comment
+
+(def k (new-kiln))
+(defcoal fred)
+(defclay mary (+ (?? fred) 5))
+(defclay joan (+ (?? mary) 2))
+
+(stoak-coal k fred 3)
+(prn (fire k mary))
+(prn (fire k joan))
     
 
 ;; End of file
