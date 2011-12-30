@@ -1,7 +1,7 @@
 (ns
     ^{:doc "A new evuation strategy for complex computations."
       :author "Jeffrey Straszheim"}
-  kiln.core
+  kiln.kiln
   (use slingshot.slingshot)
   (require [clojure.walk :as walk]))
 
@@ -20,6 +20,7 @@
    :cleanup ... ; or...
    :cleanup-success ...
    :cleanup-failure ...
+   :pre-compute [...]
    :extra-data { }
    }
   )
@@ -57,21 +58,46 @@
   (let [value (get @(:vals kiln) (:id clay) ::value-of-clay-not-found)]
     (cond
      (= value ::running) ; uh-oh, we have a loop.
-     (throw+ {:type :kiln-loop :clay clay})
+     (throw+ {:type :kiln-loop :clay clay :kiln kiln})
 
      (not= value ::value-of-clay-not-found) ; yay! it's there!
      value
 
      :otherwise ; gotta get it.
-     (if (::clay? clay)
-       (do (dosync (alter (:vals kiln) assoc (:id clay) ::running))
-           (let [result (exec-in-env kiln (:fun clay))]
-             (dosync
-              (alter (:vals kiln) assoc (:id clay) result)
-              (when (has-cleanup? clay)
-                (alter (:needs-cleanup kiln) conj clay)))
-             result))
-       (throw+ {:type :kiln-absent-coal :coal clay})))))
+     (if-not (::cleanup? kiln)
+       (if (::clay? clay)
+         (do (when-let [pres (:pre-compute clay)]
+               (doseq [pre pres] (fire kiln pre)))
+             (dosync (alter (:vals kiln) assoc (:id clay) ::running))
+             (let [result (exec-in-env kiln (:fun clay))]
+               (dosync
+                (alter (:vals kiln) assoc (:id clay) result)
+                (when (has-cleanup? clay)
+                  (alter (:needs-cleanup kiln) conj clay)))
+               result))
+         (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
+       (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
+
+(defn- cleanup
+  [kiln key]
+  (let [kiln (assoc kiln ::cleanup? true)]
+    (doseq [clay @(:needs-cleanup kiln)]
+      (when-let [fun (get clay key)]
+        (fun kiln)))))
+      
+(defn cleanup-kiln-success
+  "Run the cleanup and cleanup-success routines for each needed clay."
+  [kiln]
+  (cleanup kiln :cleanup)
+  (cleanup kiln :cleanup-success))
+
+(defn cleanup-kiln-failure
+  "Run the cleanup and cleanup-failure routines for each needed clay."
+  [kiln]
+  (cleanup kiln :cleanup)
+  (cleanup kiln :cleanup-failure))
+
+;; Building Clays
 
 (defn- get-pairs
   [stuff]
