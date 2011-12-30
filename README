@@ -81,9 +81,6 @@ ball of mud.
 The Kiln is designed to cook up that big ball of mud into something
 manageable. It is built around these principles:
 
-* No dynamic scope! (It will allow you to work with libraries that
-  require dynamic scoping, but no adding your own.)
-
 * The key values in the application are represented by top-level
   objects called "clay".
 
@@ -96,6 +93,9 @@ manageable. It is built around these principles:
 
 * Clays know how to cleanup after themselves. If your database
   connection is a clay, it will get closed at the end of the request.
+
+* No dynamic scope. It will allow you to work with libraries that
+  require dynamic scoping, but no adding your own.
 
 * No aspects. Clays can be wrapped with "glaze", which replaces the
   needs for aspects. Unlike aspects, glazes are visible where the clay

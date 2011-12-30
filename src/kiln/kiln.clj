@@ -165,17 +165,6 @@
         (build-cleanup :cleanup-success)
         (build-cleanup :cleanup-failure))))
 
-(defmacro defclay
-  "Define a clay at the top level, ensure the name is set correctly."
-  [name & stuff]
-  (let [[comment body] (if (string? (first stuff))
-                         [(first stuff) (rest stuff)]
-                         [nil stuff])
-        cur-var (ns-resolve *ns* name)
-        id (if cur-var (:id @cur-var) nil)]
-    `(def ~(with-meta name {:doc comment})
-       (clay :name ~name :id ~id ~@body))))
-
 (def ^:private allowed-coal-kws #{:id :name})
 
 (defmacro coal
@@ -189,16 +178,28 @@
      :id (list 'quote id)
      :name (list 'quote (or (:name data-map) id))}))
 
+(defn- define-preserving-id
+  [name builder stuff]
+  (let [[comment body] (if (string? (first stuff))
+                         [(first stuff) (rest stuff)]
+                         [nil stuff])
+        q-name (symbol (-> *ns* ns-name str) (str name))
+        builder (symbol "kiln.kiln" builder)
+        cur-var (resolve name)
+        id (if cur-var (:id @cur-var) nil)]
+    `(def ~(with-meta name (assoc (meta name) :doc comment))
+       (~builder :name ~q-name :id ~id ~@body))))
+    
+
+(defmacro defclay
+  "Define a clay at the top level, ensure the name is set correctly."
+  [name & stuff]
+  (define-preserving-id name "clay" stuff))
+
 (defmacro defcoal
   "Define a coal (source clay) at top level."
-  [name & comment]
-  (let [comment (if (string? (first comment)) (first comment) nil)
-        cur-var (ns-resolve *ns* name)
-        id (if cur-var (:id @cur-var) nil)
-        id (or id (gensym "coal-"))]
-    `(def ~(with-meta name {:doc comment})
-       (coal :name ~name :id ~id))))
-
+  [name & stuff]
+  (define-preserving-id name "coal" stuff))
 
 (comment
     
