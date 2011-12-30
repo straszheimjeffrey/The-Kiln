@@ -35,7 +35,7 @@ In my experience, the size of such applications seems to grow linearly
 with time, as product managers dream up more features to add and more
 complex ways for them to interact. Such as, "Hey, now that you've
 added a reward points system, can we hook it into the product
-recomendation system, so that the products with eligible bonuses
+recommendation system, so that the products with eligible bonuses
 appear higher?"
 
 The list of product demands will go on. The complexity of the
@@ -56,23 +56,23 @@ Here are some specific complexity issues that I've found:
   visible because it is created and consumed elsewhere.
 
   3. What you need to compute tends to not change much, but how you
-  compute it often does. That is, new bits of data become relavent,
-  reqiring ever-growing argument lists (or worse, the heavy dependance
+  compute it often does. That is, new bits of data become relevant,
+  requiring ever-growing argument lists (or worse, the heavy dependence
   of dynamic scope).
 
 * The classic problem, "I need this here, but I have to thread it
   through a dozen functions to get it," becomes legion. Dynamic
-  binding can help, but it creates its own maintainance nightmare.
+  binding can help, but it creates its own maintenance nightmare.
 
 * Business logic gets mixed up with security, logging, analytics,
   etc. Aspect oriented programming can help, but creates its own
-  maintainance headaches as a never-ending stream of new "aspect"
+  maintenance headaches as a never-ending stream of new "aspect"
   types gizmos are added to the application to handle the needed
   control.
 
 * Control flow gets really tricky and non-obvious.
 
-In theory lots of stong engineering vision, constant refactoring, and
+In theory lots of strong engineering vision, constant refactoring, and
 an unearthly level of insight at the start can avoid many of these
 problems. However, in the real world, I've never been that lucky. For
 me, real-world, fast-changing, competitive applications become a big
