@@ -124,8 +124,6 @@
   "Builds a clay object"
   [& clay]
   (let [data-map (apply hash-map clay)
-        _ (when-let [bads (bad-keys data-map allowed-clay-kws)]
-            (throw+ {:type :kiln-bad-key :keys bads :clay clay}))
         env-id (or (:kiln data-map) (gensym "env"))
         build-if-present (fn [data key]
                            (if-let [form (get data key)]
@@ -140,7 +138,9 @@
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
                      (assoc data key (list 'quote symb))))
-        id (or (:id clay) (gensym "clay-"))]
+        id (or (:id data-map) (gensym "clay-"))]
+    (when-let [bads (bad-keys data-map allowed-clay-kws)]
+      (throw+ {:type :kiln-bad-key :keys bads :clay clay}))
     (-> data-map
         (set-symb :id id)
         (set-symb :name id)
@@ -163,6 +163,20 @@
     `(def ~(with-meta name {:doc comment})
        (clay :name ~name :id ~id ~@body))))
 
+(def ^:private allowed-coal-kws #{:id :name})
+
+(defmacro coal
+  "Build a coal."
+  [& coal]
+  (let [data-map (apply hash-map coal)
+        id (or (:id data-map) (gensym "coal-"))]
+    (when-let [bads (bad-keys data-map allowed-coal-kws)]
+      (throw+ {:type :kiln-bad-key :keys bads :coal coal}))
+    {::coal? true
+     :id (list 'quote id)
+     :name (list 'quote (or (:name data-map) id))}))
+
+
 (defmacro defcoal
   "Define a coal (source clay) at top level."
   [name & comment]
@@ -171,9 +185,7 @@
         id (if cur-var (:id @cur-var) nil)
         id (or id (gensym "coal-"))]
     `(def ~(with-meta name {:doc comment})
-       {:id (quote ~id)
-        :name (quote ~name)
-        ::coal? true})))
+       (coal :name ~name :id ~id))))
 
 (comment
 
