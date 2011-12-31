@@ -119,6 +119,18 @@
     (is (= '[d c b] @cleanup-order)
         "cleanup should have happened in the reverse order of firing")))
 
+(deftest test-cleanup-after-firing-error
+  (let [k (new-kiln)
+        cleaned? (atom 0)
+        external-rs (clay :value 42 :cleanup (swap! cleaned? inc))
+        internal-rs (clay :value (do (?? external-rs) (throw+ ::whatever))
+                          :cleanup (swap! cleaned? - 50000))]
+    (is (try+ (fire k internal-rs), false
+              (catch (= % ::whatever) _
+                (cleanup-kiln-failure k), true)))
+    (is (= 1 @cleaned?)
+        "cleaned external-rs once, but never internal-rs")))
+
 (defcoal qqq)
 (defclay yyy)
 
