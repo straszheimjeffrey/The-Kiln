@@ -1,5 +1,6 @@
-# The Kiln
+;;;; The Kiln
 
+(comment
 The Kiln is designed to make large complex functions easier to
 write. By "large and complex", I mean things such as web applications,
 where you do not compute a single, simple result for a well-defined
@@ -105,21 +106,152 @@ manageable. It is built around these principles:
   However, those functions should be as simple as possible, and do
   exactly one thing. (Let all the crazy, ugly dependencies live in the
   kiln.)
+)
+
+
+;;; Usage
+
+;; To start with, you must create some "coal". Coals are your base
+;; values, the ones not computed from other things in the kiln. For a
+;; webapp, we'll use the request object.
+
+(defcoal request "The request object")
+
+;; Don't worry that it's blank. We'll assign a value later.
+
+;; So, now we can compute stuff from that.
+
+(defclay uri
+  "The URI of the request"
+  :value (:uri (?? request)))
+
+;; Note the ?? syntax. It will automaticall lookup the request.
+
+(defclay path
+  "The path"
+  :value (.getPath (?? uri)))
+
+;; Dispatching is one of the first things you do in most
+;; frameworks. For now, we just dispatch on path.
+
+(defclay dispatch
+  "What do I do?"
+  :value (condp = (?? path)
+           "/remove-user" :remove-user
+           "/add-user" :add-user
+           "/view-user" :view-user))
+
+;; Of course, as the application grows, dispatching will get more
+;; complex. No problem, just make the clay look at more stuff.
+
+;; We must match the dispatch to an action
+
+(declare log)
+(declare security-check)
+(declare db-con)
+(declare user)
+
+(defclay add-user!
+  :glaze [(log :info)
+          security-check]
+  :value (add-user (?? db-con) (?? user)))
+
+(defclay remove-user!
+  :glaze [(log :info)
+          security-check]
+  :value (remove-user (?? db-con) (?? user)))
+
+(defclay action!
+  "Dispatch to the action to perform"
+  :glaze [(log :debug)]
+  :value (condp = (?? dispatch)
+           :remove-user (?? remove-user!)
+           :add-user (?? add-user!)
+           :view-user nil ; no changes!
+           ))
+
+;; Here I'm assuming that the functions add-user and remove-user are
+;; already defined somewhere.
+
+;; So, we need a database connection.
+
+(defclay db-con
+  :value (get-db-con)
+  :cleanup (close-db-con ?self))
+
+;; If you wanted to automatically manage transactioning, try this:
+
+(defclay transactioned-db
+  :value (get-transactioned-connection)
+  :cleanup-success (do (commit ?self)
+                       (close-db-con ?self))
+  :cleanup-failure (do (rollback ?self)
+                       (close-db-con ?self)))
+
+;; I won't detail user, but you can figure it out.
+
+;; Let's look at glaze
+
+(defglaze log
+  "Log an operation"
+  :args [level]
+  :operation (let [clay-name (str (:name ?clay))]
+               (log level (format "Begin %s" clay-name))
+               (let [result (?next)]
+                 (log level (format "Complete %s result: %s"
+                                    clay-name
+                                    (str result))))))
+
+;; Of course, in a real application that would become more detailed.
+
+(defglaze security-check
+  "Throw if user not valid"
+  :operation (if-not (valid-user? (?? user))
+               (throw+ {:type :security-breach!
+                        :user (?? user)
+                        :clay (?clay)})
+               (?next)))
+
+;; Of course, we need a view:
+
+(defclay template
+  :value (condp = (?? dispatch)
+           :remove-user "templates/logon"
+           :add-user "templates/show-user"
+           :view-user "templates/show-user"))
+
+;; And so on.
+
+;; What does the driver look like:
+
+(defn run-kiln
+  [request]
+  (let [kiln (new-kiln)]
+    (stoke-coal kiln request)
+    (let [result (try
+                   (fire kiln action!) ; do the stuff
+                   (render-template (fire kiln template))
+                   (catch Exception e
+                     (cleanup-kiln-failure kiln)
+                     (throw e)))]
+      (cleanup-kiln-success kiln)
+      result)))
 
 
 
-## Usage
 
-FIXME: write
+;;; TODO
 
-## TODO
+["Dosync handling rules for clay."
+ "Dynamic Glaze."
+ "Cleanup for Glaze."]
 
-Dosync handling rules for clay.
-Dynamic Glaze.
-Cleanup for Glaze.
+;;; License
 
-## License
-
-Copyright (C) 2011 FIXME
+(comment
+Copyright (C) 2012 Jeffrey Straszheim
 
 Distributed under the Eclipse Public License, the same as Clojure.
+)
+
+;; End of file
