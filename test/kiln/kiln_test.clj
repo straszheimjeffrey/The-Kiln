@@ -30,9 +30,9 @@
 
 (defclay sally!
   "Double coal-2"
-  :pre-fire [bob]
   :cleanup (swap! (?? coal-2) (constantly []))
-  :value (swap! (?? coal-2) (fn [k] (vec (concat k k)))))
+  :value (do (?? bob)
+             (swap! (?? coal-2) (fn [k] (vec (concat k k))))))
   
 ;; A very basic test
 
@@ -160,8 +160,88 @@
     (is (= @store [d k]))
     (is (= (fire k f) :override))
     (is (= @store [d k f]))))
-           
-  
+
+
+(deftest basic-arguments-test
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (glaze :name b
+                 :operation (do
+                              (swap! store conj ?args)
+                              (?next)))
+        c (clay :name c
+                :args [fred mary]
+                :glaze [b]
+                :cleanup (do (swap! store conj ?self)
+                             (swap! store conj fred)
+                             (swap! store conj mary))
+                :value (+ (?? a) fred mary))]
+    (stoke-coal k a 1)
+    (is (= (fire k c 2 3) 6))
+    (is (= (fire k c 10 11) 22))
+    (is (= @store [{'fred 2 'mary 3}
+                   {'fred 10 'mary 11}]))
+    (swap! store (constantly []))
+    (cleanup-kiln-success k)
+    (is (= @store [22 10 11 6 2 3]))))
+
+(deftest advanced-arguments-tests
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (glaze :name b
+                 :args [x y]
+                 :operation (do
+                              (swap! store conj [x y ?args])
+                              (?next)))
+        c (glaze :name c
+                 :args [z]
+                 :operation (do
+                              (swap! store conj [z ?args])
+                              (?next)))
+        d (clay :name d
+                :args [aa bb]
+                :glaze [(b aa 5)
+                        (c bb)]
+                :cleanup (swap! store conj [?self aa bb])
+                :value (+ (?? a) aa bb))]
+    (stoke-coal k a 1)
+    (is (= (fire k d 2 3) 6))
+    (is (= (fire k d 10 11) 22))
+    (is (= @store [[2 5 {'aa 2 'bb 3}]
+                   [3 {'aa 2 'bb 3}]
+                   [10 5 {'aa 10 'bb 11}]
+                   [11 {'aa 10 'bb 11}]]))
+    (swap! store (constantly []))
+    (cleanup-kiln-success k)
+    (is (= @store [[22 10 11]
+                   [6 2 3]]))))
+
+(deftest calling-??-in-glaze
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (coal)
+        c (glaze :name c
+                 :args [x]
+                 :operation (do (swap! store conj (+ x (?? b)))
+                                (?next)))
+        d (clay :name d
+                :args [q]
+                :glaze [(c q)]
+                :value :fish)
+        e (clay :name e
+                :glaze [(c (?? a))]
+                :value :bob)]
+    (stoke-coal k a 1)
+    (stoke-coal k b 2)
+    (fire k d 3)
+    (fire k e)
+    (is (= @store [5 3]))))
+                 
+
+
 (comment
 
 (run-tests)
