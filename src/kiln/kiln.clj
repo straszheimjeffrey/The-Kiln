@@ -122,12 +122,16 @@
              :exceptions @(:cleanup-exceptions kiln)})))
 
 (defn cleanup-kiln-success
-  "Run the cleanup and cleanup-success routines for each needed clay."
+  "Run the cleanup and cleanup-success routines for each needed
+  clay. Cleanups are run in reverse order from when the clay was
+  invoked."
   [kiln]
   (cleanup-kiln-which kiln :cleanup-success))
                     
 (defn cleanup-kiln-failure
-  "Run the cleanup and cleanup-failure routines for each needed clay."
+  "Run the cleanup and cleanup-failure routines for each needed
+  clay. Cleanups are run in reverse order from when the clay was
+  invoked."
   [kiln]
   (cleanup-kiln-which kiln :cleanup-failure))
 
@@ -195,8 +199,8 @@ The allowed parameters are:
 form such as (?? a-clay optional-args...) will be converted to a
 command to fire that clay in the current kiln.
 
-:kiln - a symbol, if present, the calling kiln can be accessed withing
-the :value computination using this
+:kiln - a symbol, if present, the calling kiln can be accessed using
+this symbol.
 
 :glaze - a vector of glazes (see below)
 
@@ -217,8 +221,10 @@ The glazes can be in two formats, a bare glaze (usually as a
 symbol). For glazes that require arguments, provide a list with the
 glaze first and the arguments following, like this:
 
- (clay :glaze [(some-glaze-with-args 3 4)
-               a-normal-glaze])"
+ (clay :args [an-arg another-arg]
+       :glaze [(some-glaze-with-args an-arg (?? some-clay))
+               a-normal-glaze])
+       :value (+ an-arg (?? a-different-clay another-arg)))"
   [& clay]
   (let [data-map (apply hash-map clay)
         kiln-sym (or (:kiln data-map) (gensym "env"))
