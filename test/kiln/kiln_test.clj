@@ -30,9 +30,9 @@
 
 (defclay sally!
   "Double coal-2"
-  :pre-fire [bob]
   :cleanup (swap! (?? coal-2) (constantly []))
-  :value (swap! (?? coal-2) (fn [k] (vec (concat k k)))))
+  :value (do (?? bob)
+             (swap! (?? coal-2) (fn [k] (vec (concat k k))))))
   
 ;; A very basic test
 
@@ -141,6 +141,32 @@
     (is (try+ (fire k deadly), false
               (catch [:type :kiln-loop] _ true))
         "detects mutual, as well as self-recursion")))
+
+(deftest basic-glaze-test
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (glaze :name b
+                 :operation (do
+                              (swap! store conj ?clay)
+                              (?next)))
+        c (glaze :kiln fred
+                 :name c
+                 :operation (do
+                              (swap! store conj fred)
+                              (?next)))
+        d (clay :glaze [b c]
+                :value (+ (?? a) 1))
+        e (glaze :name e
+                 :operation :override)
+        f (clay :glaze [b e c]
+                :value :never-happen)]
+    (stoke-coal k a 0)
+    (is (= (fire k d) 1))
+    (is (= @store [d k]))
+    (is (= (fire k f) :override))
+    (is (= @store [d k f]))))
+           
   
 (comment
 

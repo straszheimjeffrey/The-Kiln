@@ -33,7 +33,13 @@
   [kiln clay]
   (try
     (dosync (alter (:vals kiln) assoc (:id clay) ::running))
-    ((:fun clay) kiln)
+    (let [clay-fun (fn [] ((:fun clay) kiln))
+          apply-glaze (fn [next gl]
+                        (assert (::glaze? gl))
+                        (fn []
+                          ((:operation gl) kiln clay next)))
+          glazes (reverse (if-let [gl (:glaze clay)] (gl) nil))]
+      ((reduce apply-glaze clay-fun glazes)))
     (finally
      (dosync (alter (:vals kiln) assoc (:id clay) nil)))))
 
@@ -53,14 +59,14 @@
      :otherwise ; gotta get it.
      (if-not (::cleanup? kiln)
        (if (::clay? clay)
-         (do (when-let [pres (if-let [prf (:pre-fire clay)] (prf) nil)]
-               (doseq [pre pres] (fire kiln pre)))
-             (let [result (run-clay kiln clay)]
-               (dosync
-                (alter (:vals kiln) assoc (:id clay) result)
-                (when (has-cleanup? clay)
-                  (alter (:needs-cleanup kiln) conj clay)))
-               result))
+         (do
+           ;; compute and store result
+           (let [result (run-clay kiln clay)]
+             (dosync
+              (alter (:vals kiln) assoc (:id clay) result)
+              (when (has-cleanup? clay)
+                (alter (:needs-cleanup kiln) conj clay)))
+             result))
          (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
        (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
 
@@ -130,7 +136,7 @@
        ~(walk/prewalk replace-fire form))))
 
 (def ^:private allowed-clay-kws #{:id :name :value
-                                 :pre-fire :kiln
+                                 :kiln :glaze
                                  :cleanup :cleanup-success :cleanup-failure
                                  :extra})
 
@@ -161,7 +167,7 @@
         (assoc ::clay? true)
         (assoc :fun (build-env-fun (:value data-map) env-id nil))
         (dissoc :value)
-        (wrap-if-present :pre-fire)
+        (wrap-if-present :glaze)
         (build-cleanup :cleanup)
         (build-cleanup :cleanup-success)
         (build-cleanup :cleanup-failure))))
@@ -179,6 +185,28 @@
      :id (list 'quote id)
      :name (list 'quote (or (:name data-map) id))}))
 
+(def ^:private allowed-glaze-kws #{:id :name :kiln :operation})
+
+(defmacro glaze
+  "Build a glaze"
+  [& glaze]
+  (let [data-map (apply hash-map glaze)
+        id (or (:id data-map) (gensym "glaze-"))
+        name (or (:name data-map) id)
+        env-id (or (:kiln data-map) (gensym "env"))]
+    (when-let [bads (bad-keys data-map allowed-glaze-kws)]
+      (throw+ {:type :kiln-bad-key :keys bads :glaze glaze}))
+    {::glaze? true
+     :id (list 'quote id)
+     :name (list 'quote name)
+     :operation (build-env-fun (:operation data-map)
+                               env-id
+                               ['?clay '?next])}))
+
+
+
+;; top level
+
 (defn- define-preserving-id
   [name builder stuff]
   (let [[comment body] (if (string? (first stuff))
@@ -191,7 +219,6 @@
     `(def ~(with-meta name (assoc (meta name) :doc comment))
        (~builder :name ~q-name :id ~id ~@body))))
     
-
 (defmacro defclay
   "Define a clay at the top level, ensure the name is set correctly."
   [name & stuff]
@@ -201,6 +228,11 @@
   "Define a coal (source clay) at top level."
   [name & stuff]
   (define-preserving-id name "coal" stuff))
+
+(defmacro defglaze
+  "Define a glaze at the top level"
+  [name & stuff]
+  (define-preserving-id name "glaze" stuff))
 
 (comment
     
