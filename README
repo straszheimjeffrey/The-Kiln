@@ -1,6 +1,7 @@
 ;;;; The Kiln
 
 (comment
+  
 The Kiln is designed to make large complex functions easier to
 write. By "large and complex", I mean things such as web applications,
 where you do not compute a single, simple result for a well-defined
@@ -250,6 +251,7 @@ manageable. It is built around these principles:
 ;;; License
 
 (comment
+  
 Copyright (C) 2012 Jeffrey Straszheim
 
 Distributed under the Eclipse Public License, the same as Clojure.
