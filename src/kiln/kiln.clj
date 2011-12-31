@@ -51,7 +51,7 @@
                                    next
                                    args-map
                                    gl-args))))
-          glazes (reverse (apply glazes args))]
+          glazes (reverse (apply glazes kiln args))]
       ((reduce apply-glaze clay-fun glazes)))
     ;; Simple non-glazed run
     (apply (:fun clay) kiln args)))
@@ -145,28 +145,32 @@
   (let [result (filter (comp not allowed-fn) (keys map))]
     (if (empty? result) nil result)))
 
+(defn- replace-fire
+  [kiln-sym form]
+  (let [replace (fn [f]
+                  (if (and (seq? f)
+                           (= (first f) '??))
+                    `(fire ~kiln-sym ~@(rest f))
+                    f))]
+    (walk/prewalk replace form)))
+
 (defn- build-env-fun
-  [form clay-sym other-args]
-  (let [clay-sym (or clay-sym (gensym "env"))
-        replace-fire (fn [f]
-                       (if (and (seq? f)
-                                (= (first f) '??))
-                         `(fire ~clay-sym ~@(rest f))
-                         f))]
-    `(fn
-       ~(vec (list* clay-sym other-args))
-       ~(walk/prewalk replace-fire form))))
+  [form kiln-sym other-args]
+  `(fn
+     ~(vec (list* kiln-sym other-args))
+     ~(replace-fire kiln-sym form)))
 
 (defn- wrap-glazes
-  [glazes args]
+  [glazes kiln-sym args]
   (let [make-item (fn [i]
                     (cond
                      (symbol? i) {:item i :args nil}
                      (seq i) {:item (first i) :args (vec (rest i))}
                      (::clay? i) {:item i :args nil}
                      :otherwise (throw+ {:type :kiln-bad-glaze :which i})))
-        items (map make-item glazes)]
-    `(fn ~args ~(vec items))))
+        items (map make-item glazes)
+        items (replace-fire kiln-sym items)]
+    `(fn [~kiln-sym ~@args] ~(vec items))))
 
 
 (def ^:private allowed-clay-kws #{:id :name :value
@@ -217,16 +221,16 @@ glaze first and the arguments following, like this:
                a-normal-glaze])"
   [& clay]
   (let [data-map (apply hash-map clay)
-        env-id (or (:kiln data-map) (gensym "env"))
+        kiln-sym (or (:kiln data-map) (gensym "env"))
         args (or (:args data-map) [])
         build-cleanup (fn [data key]
                         (if-let [form (get data key)]
                           (assoc data key (build-env-fun form
-                                                         env-id
+                                                         kiln-sym
                                                          (cons '?self args)))
                           data))
         data-map (if-let [glazes (:glaze data-map)]
-                   (assoc data-map :glaze (wrap-glazes glazes args))
+                   (assoc data-map :glaze (wrap-glazes glazes kiln-sym args))
                    data-map)
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
@@ -239,7 +243,7 @@ glaze first and the arguments following, like this:
         (set-symb :id id)
         (set-symb :name id)
         (assoc ::clay? true)
-        (assoc :fun (build-env-fun (:value data-map) env-id args))
+        (assoc :fun (build-env-fun (:value data-map) kiln-sym args))
         (dissoc :value)
         (build-cleanup :cleanup)
         (build-cleanup :cleanup-success)
@@ -267,7 +271,7 @@ glaze first and the arguments following, like this:
         args (or (:args data-map) [])
         id (or (:id data-map) (gensym "glaze-"))
         name (or (:name data-map) id)
-        env-id (or (:kiln data-map) (gensym "env"))]
+        kiln-sym (or (:kiln data-map) (gensym "env"))]
     (when-let [bads (bad-keys data-map allowed-glaze-kws)]
       (throw+ {:type :kiln-bad-key :keys bads :glaze glaze}))
     {::glaze? true
@@ -275,7 +279,7 @@ glaze first and the arguments following, like this:
      :id (list 'quote id)
      :name (list 'quote name)
      :operation (build-env-fun (:operation data-map)
-                               env-id
+                               kiln-sym
                                (concat ['?clay '?next '?args] args))}))
 
 

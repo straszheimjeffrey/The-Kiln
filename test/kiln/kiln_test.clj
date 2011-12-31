@@ -218,6 +218,29 @@
     (is (= @store [[22 10 11]
                    [6 2 3]]))))
 
+(deftest calling-??-in-glaze
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (coal)
+        c (glaze :name c
+                 :args [x]
+                 :operation (do (swap! store conj (+ x (?? b)))
+                                (?next)))
+        d (clay :name d
+                :args [q]
+                :glaze [(c q)]
+                :value :fish)
+        e (clay :name e
+                :glaze [(c (?? a))]
+                :value :bob)]
+    (stoke-coal k a 1)
+    (stoke-coal k b 2)
+    (fire k d 3)
+    (fire k e)
+    (is (= @store [5 3]))))
+                 
+
 
 (comment
 
