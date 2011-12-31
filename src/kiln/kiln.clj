@@ -15,13 +15,18 @@
    :needs-cleanup (ref nil)
    :cleanup-exceptions (ref [])})
 
+(defn- clay-key
+  [clay args]
+  {:id (:id clay)
+   :args args})
+
 (defn stoke-coal
   "Within the kiln, set the coal to the desired value."
   [kiln coal val]
   {:pre [(::kiln? kiln)
          (::coal? coal)]}
   (dosync
-   (alter (:vals kiln) assoc (:id coal) val)))
+   (alter (:vals kiln) assoc (clay-key coal nil) val)))
 
 (defn- has-cleanup?
   [clay]
@@ -30,25 +35,35 @@
       (:cleanup-failure clay)))
 
 (defn- run-clay
-  [kiln clay]
-  (try
-    (dosync (alter (:vals kiln) assoc (:id clay) ::running))
-    (let [clay-fun (fn [] ((:fun clay) kiln))
-          apply-glaze (fn [next gl]
-                        (assert (::glaze? gl))
-                        (fn []
-                          ((:operation gl) kiln clay next)))
-          glazes (reverse (if-let [gl (:glaze clay)] (gl) nil))]
+  [kiln clay args]
+  (if-let [glazes (:glaze clay)]
+    ;; Run with glazes
+    (let [args-map (into {} (map (fn [a b] [a b]) (:args clay) args))
+          clay-fun (fn [] (apply (:fun clay) kiln args))
+          apply-glaze (fn [next gl-map]
+                        (let [gl (:item gl-map)
+                              gl-args (:args gl-map)]
+                          (assert (::glaze? gl))
+                          (fn []
+                            (apply (:operation gl)
+                                   kiln
+                                   clay
+                                   next
+                                   args-map
+                                   gl-args))))
+          glazes (reverse (apply glazes args))]
       ((reduce apply-glaze clay-fun glazes)))
-    (finally
-     (dosync (alter (:vals kiln) assoc (:id clay) nil)))))
-
+    ;; Simple non-glazed run
+    (apply (:fun clay) kiln args)))
+  
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
-  [kiln clay] ; the clay can be a coal
+  [kiln clay & args] ; the clay can be a coal
   {:pre [(::kiln? kiln)
-         (or (::clay? clay) (::coal? clay))]}
-  (let [value (get @(:vals kiln) (:id clay) ::value-of-clay-not-found)]
+         (or (::clay? clay) (::coal? clay))
+         (= (count args) (count (:args clay)))]}
+  (let [key (clay-key clay args)
+        value (get @(:vals kiln) key ::value-of-clay-not-found)]
     (cond
      (= value ::running) ; uh-oh, we have a loop.
      (throw+ {:type :kiln-loop :clay clay :kiln kiln})
@@ -61,31 +76,38 @@
        (if (::clay? clay)
          (do
            ;; compute and store result
-           (let [result (run-clay kiln clay)]
+           (let [result (try
+                          (dosync (alter (:vals kiln) assoc key ::running))
+                          (run-clay kiln clay args)
+                          (finally (dosync (alter (:vals kiln) assoc key nil))))]
              (dosync
-              (alter (:vals kiln) assoc (:id clay) result)
+              (alter (:vals kiln) assoc key result)
               (when (has-cleanup? clay)
-                (alter (:needs-cleanup kiln) conj clay)))
+                (alter (:needs-cleanup kiln) conj {:clay clay
+                                                   :args args})))
              result))
          (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
        (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
 
 (defn clay-fired?
   "Has this clay been fired?"
-  [kiln clay]
+  [kiln clay & args]
   {:pre [(::kiln? kiln)
          (or (::clay? clay) (::coal? clay))]}
-  (contains? @(:vals kiln) (:id clay)))
+  (contains? @(:vals kiln) (clay-key clay args)))
 
 (defn- cleanup
   [kiln keys]
   (let [kiln (assoc kiln ::cleanup? true)]
-    (doseq [clay @(:needs-cleanup kiln)]
-      (let [funs (keep #(get clay %) keys)]
+    (doseq [clay-map @(:needs-cleanup kiln)]
+      (let [clay (:clay clay-map)
+            args (:args clay-map)
+            args-map (into {} (map (fn [a b] [a b]) (:args clay) args))
+            funs (keep #(get clay %) keys)]
         (try
           (let [result (fire kiln clay)]
             (doseq [fun funs]
-              (fun kiln result)))
+              (fun kiln result args-map)))
           (catch Exception e
             (dosync (alter (:cleanup-exceptions kiln) conj e))))))))
       
@@ -129,14 +151,25 @@
         replace-fire (fn [f]
                        (if (and (seq? f)
                                 (= (first f) '??))
-                         `(fire ~clay-sym ~(second f))
+                         `(fire ~clay-sym ~@(rest f))
                          f))]
     `(fn
        ~(vec (list* clay-sym other-args))
        ~(walk/prewalk replace-fire form))))
 
+(defn- wrap-glazes
+  [glazes args]
+  (let [make-item (fn [i]
+                    (cond
+                     (symbol? i) {:item i :args nil}
+                     (seq i) {:item (first i) :args (rest i)}
+                     :otherwise (throw+ {:type :kiln-bad-item :which i})))
+        items (map make-item glazes)]
+    `(fn ~args ~(vec items))))
+
+
 (def ^:private allowed-clay-kws #{:id :name :value
-                                 :kiln :glaze
+                                 :kiln :glaze :args
                                  :cleanup :cleanup-success :cleanup-failure
                                  :extra})
 
@@ -145,16 +178,16 @@
   [& clay]
   (let [data-map (apply hash-map clay)
         env-id (or (:kiln data-map) (gensym "env"))
+        args (or (:args data-map) [])
         build-cleanup (fn [data key]
                         (if-let [form (get data key)]
                           (assoc data key (build-env-fun form
                                                          env-id
-                                                         ['?self]))
+                                                         ['?self '?args]))
                           data))
-        wrap-if-present (fn [data key]
-                          (if-let [form (get data key)]
-                            (assoc data key `(fn [] ~form))
-                            data))
+        data-map (if-let [glazes (:glaze data-map)]
+                   (assoc data-map :glaze (wrap-glazes glazes args))
+                   data-map)
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
                      (assoc data key (list 'quote symb))))
@@ -162,12 +195,12 @@
     (when-let [bads (bad-keys data-map allowed-clay-kws)]
       (throw+ {:type :kiln-bad-key :keys bads :clay clay}))
     (-> data-map
+        (assoc :args (list 'quote args))
         (set-symb :id id)
         (set-symb :name id)
         (assoc ::clay? true)
-        (assoc :fun (build-env-fun (:value data-map) env-id nil))
+        (assoc :fun (build-env-fun (:value data-map) env-id args))
         (dissoc :value)
-        (wrap-if-present :glaze)
         (build-cleanup :cleanup)
         (build-cleanup :cleanup-success)
         (build-cleanup :cleanup-failure))))
@@ -185,23 +218,25 @@
      :id (list 'quote id)
      :name (list 'quote (or (:name data-map) id))}))
 
-(def ^:private allowed-glaze-kws #{:id :name :kiln :operation})
+(def ^:private allowed-glaze-kws #{:id :name :kiln :operation :args})
 
 (defmacro glaze
   "Build a glaze"
   [& glaze]
   (let [data-map (apply hash-map glaze)
+        args (or (:args data-map) [])
         id (or (:id data-map) (gensym "glaze-"))
         name (or (:name data-map) id)
         env-id (or (:kiln data-map) (gensym "env"))]
     (when-let [bads (bad-keys data-map allowed-glaze-kws)]
       (throw+ {:type :kiln-bad-key :keys bads :glaze glaze}))
     {::glaze? true
+     :args (list 'quote args)
      :id (list 'quote id)
      :name (list 'quote name)
      :operation (build-env-fun (:operation data-map)
                                env-id
-                               ['?clay '?next])}))
+                               (concat ['?clay '?next '?args] args))}))
 
 
 
