@@ -149,20 +149,16 @@
   (let [result (filter (comp not allowed-fn) (keys map))]
     (if (empty? result) nil result)))
 
-(defn- replace-fire
+(defn- wrap-fires
   [kiln-sym form]
-  (let [replace (fn [f]
-                  (if (and (seq? f)
-                           (= (first f) '??))
-                    `(fire ~kiln-sym ~@(rest f))
-                    f))]
-    (walk/prewalk replace form)))
+  `(letfn [(~'?? [dep# & args#] (apply fire ~kiln-sym dep# args#))]
+     ~form))
 
 (defn- build-env-fun
   [form kiln-sym other-args]
   `(fn
      ~(vec (list* kiln-sym other-args))
-     ~(replace-fire kiln-sym form)))
+     ~(wrap-fires kiln-sym form)))
 
 (defn- wrap-glazes
   [glazes kiln-sym args]
@@ -173,8 +169,8 @@
                      (::clay? i) {:item i :args nil}
                      :otherwise (throw+ {:type :kiln-bad-glaze :which i})))
         items (map make-item glazes)
-        items (replace-fire kiln-sym items)]
-    `(fn [~kiln-sym ~@args] ~(vec items))))
+        items (wrap-fires kiln-sym (vec items))]
+    `(fn [~kiln-sym ~@args] ~items)))
 
 
 (def ^:private allowed-clay-kws #{:id :name :value
