@@ -2,8 +2,7 @@
     ^{:doc "A new evaluation strategy for complex computations."
       :author "Jeffrey Straszheim"}
   kiln.kiln
-  (use slingshot.slingshot)
-  (require [clojure.walk :as walk]))
+  (use slingshot.slingshot))
 
 
 
@@ -149,20 +148,12 @@
   (let [result (filter (comp not allowed-fn) (keys map))]
     (if (empty? result) nil result)))
 
-(defn- replace-fire
-  [kiln-sym form]
-  (let [replace (fn [f]
-                  (if (and (seq? f)
-                           (= (first f) '??))
-                    `(fire ~kiln-sym ~@(rest f))
-                    f))]
-    (walk/prewalk replace form)))
-
 (defn- build-env-fun
   [form kiln-sym other-args]
-  `(fn
-     ~(vec (list* kiln-sym other-args))
-     ~(replace-fire kiln-sym form)))
+  (let [kiln-sym (or kiln-sym `env#)]
+    `(fn [~kiln-sym ~@other-args]
+       (letfn [(~'?? [& dep+args#] (apply fire ~kiln-sym dep+args#))]
+         ~form))))
 
 (defn- wrap-glazes
   [glazes kiln-sym args]
@@ -172,10 +163,8 @@
                      (seq i) {:item (first i) :args (vec (rest i))}
                      (::clay? i) {:item i :args nil}
                      :otherwise (throw+ {:type :kiln-bad-glaze :which i})))
-        items (map make-item glazes)
-        items (replace-fire kiln-sym items)]
-    `(fn [~kiln-sym ~@args] ~(vec items))))
-
+        items (map make-item glazes)]
+    (build-env-fun (vec items) kiln-sym args)))
 
 (def ^:private allowed-clay-kws #{:id :name :value
                                  :kiln :glaze :args
