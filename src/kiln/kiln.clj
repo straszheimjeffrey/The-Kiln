@@ -163,7 +163,8 @@
                     (cond
                      (symbol? i) {:item i :args nil}
                      (seq i) {:item (first i) :args (vec (rest i))}
-                     :otherwise (throw+ {:type :kiln-bad-item :which i})))
+                     (::clay? i) {:item i :args nil}
+                     :otherwise (throw+ {:type :kiln-bad-glaze :which i})))
         items (map make-item glazes)]
     `(fn ~args ~(vec items))))
 
@@ -174,7 +175,46 @@
                                  :extra})
 
 (defmacro clay
-  "Builds a clay object"
+  "Builds a clay object. The arguments are alternating key-values, like this:
+
+ (clay :glaze [glaze-one glaze-two]
+       :args [item]
+       :value (get-from-database item))
+
+The allowed parameters are:
+
+:id - The underlying id to use, must be unique, optional
+
+:name - A symbol for debugging use, defaults to :id
+
+:value - the code to run to produce the value. Withing this code, any
+form such as (?? a-clay optional-args...) will be converted to a
+command to fire that clay in the current kiln.
+
+:kiln - a symbol, if present, the calling kiln can be accessed withing
+the :value computination using this
+
+:glaze - a vector of glazes (see below)
+
+:args - a vec of symbols, the arguments that can be passed to this
+clay. The args are visible within the :value, the :cleanups, and
+the :glaze list.
+
+:cleanup, :cleanup-success, :cleanup-failure - code to run at cleanup
+time. :cleanup always runs, followed by either :cleanup-success
+or :cleanup-failure, depending on which cleanup method is used. Each
+cleanup routing is passed an additional argument ?self, which is the
+original value computed for this clay. Also, the (?? clay ...) syntax
+works here.
+
+:extra - a map of extra data with user specified meaning
+
+The glazes can be in two formats, a bare glaze (usually as a
+symbol). For glazes that require arguments, provide a list with the
+glaze first and the arguments following, like this:
+
+ (clay :glaze [(some-glaze-with-args 3 4)
+               a-normal-glaze])"
   [& clay]
   (let [data-map (apply hash-map clay)
         env-id (or (:kiln data-map) (gensym "env"))
