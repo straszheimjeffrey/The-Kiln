@@ -43,6 +43,7 @@
     (stoke-coal k coal-2 store)
     (is (not (clay-fired? k fred)))
     (is (= (fire k fred) 6))
+    (is (= (fire k fred) 6) "value saved")
     (fire k mary!)
     (is (= @store [6]))
     (fire k sally!)
@@ -103,6 +104,33 @@
             (catch [:type :kiln-cleanup-exception] {:keys [exceptions]}
               (map (fn [e] (-> e .getData :object :value)) exceptions)))))))
 
+(deftest test-cleanup-order
+  (let [k (new-kiln)
+        cleanup-order (atom [])
+        cleaning! #(swap! cleanup-order conj %)
+        a (coal)
+        b (clay :value (inc (?? a)) :cleanup (cleaning! 'b))
+        c (clay :value (inc (?? b)) :cleanup (cleaning! 'c))
+        d (clay :value (+ (?? b) (?? c)) :cleanup (cleaning! 'd))]
+    (stoke-coal k a 42)
+    (fire k d)
+    (is (= [43 44 (+ 43 44)] (map (partial fire k) [b c d])))
+    (cleanup-kiln-success k)
+    (is (= '[d c b] @cleanup-order)
+        "cleanup should have happened in the reverse order of firing")))
+
+(deftest test-cleanup-after-firing-error
+  (let [k (new-kiln)
+        cleaned? (atom 0)
+        external-rs (clay :value 42 :cleanup (swap! cleaned? inc))
+        internal-rs (clay :value (do (?? external-rs) (throw+ ::whatever))
+                          :cleanup (swap! cleaned? - 50000))]
+    (is (try+ (fire k internal-rs), false
+              (catch (= % ::whatever) _
+                (cleanup-kiln-failure k), true)))
+    (is (= 1 @cleaned?)
+        "cleaned external-rs once, but never internal-rs")))
+
 (defcoal qqq)
 (defclay yyy)
 
@@ -123,8 +151,10 @@
     (fire k bob!)
     (is (= @store [k]))))
 
-(declare loopy-clay)
+(declare loopy-clay embrace)
 (defclay loopy-clay :value (?? loopy-clay))
+(defclay deadly :value (?? embrace))
+(defclay embrace :value (?? deadly))
   
 (deftest test-loopy-clay
   (let [k (new-kiln)]
@@ -134,7 +164,10 @@
             (catch [:type :kiln-loop] {:keys [clay kiln]}
               (is (= clay loopy-clay))
               (is (= kiln k))
-              :exception-thrown))))))
+              :exception-thrown))))
+    (is (try+ (fire k deadly), false
+              (catch [:type :kiln-loop] _ true))
+        "detects mutual, as well as self-recursion")))
 
 (deftest basic-glaze-test
   (let [k (new-kiln)
