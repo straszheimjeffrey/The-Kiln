@@ -115,7 +115,7 @@
     (fire k d)
     (is (= [43 44 (+ 43 44)] (map (partial fire k) [b c d])))
     (cleanup-kiln-success k)
-    (is (= '[c b d] @cleanup-order)
+    (is (= '[d c b] @cleanup-order)
         "cleanup should have happened in the reverse order of firing")))
 
 (defcoal qqq)
