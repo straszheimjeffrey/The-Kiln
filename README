@@ -227,9 +227,9 @@ manageable. It is built around these principles:
 ;; What does the driver look like:
 
 (defn run-kiln
-  [request]
+  [req]
   (let [kiln (new-kiln)]
-    (stoke-coal kiln request)
+    (stoke-coal kiln request req)
     (let [result (try
                    (fire kiln action!) ; do the stuff
                    (render-template (fire kiln template) ...other kiln data...)
