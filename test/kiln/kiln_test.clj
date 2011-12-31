@@ -186,6 +186,38 @@
     (cleanup-kiln-success k)
     (is (= @store [22 10 11 6 2 3]))))
 
+(deftest advanced-arguments-tests
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (glaze :name b
+                 :args [x y]
+                 :operation (do
+                              (swap! store conj [x y ?args])
+                              (?next)))
+        c (glaze :name c
+                 :args [z]
+                 :operation (do
+                              (swap! store conj [z ?args])
+                              (?next)))
+        d (clay :name d
+                :args [aa bb]
+                :glaze [(b aa 5)
+                        (c bb)]
+                :cleanup (swap! store conj [?self aa bb])
+                :value (+ (?? a) aa bb))]
+    (stoke-coal k a 1)
+    (is (= (fire k d 2 3) 6))
+    (is (= (fire k d 10 11) 22))
+    (is (= @store [[2 5 {'aa 2 'bb 3}]
+                   [3 {'aa 2 'bb 3}]
+                   [10 5 {'aa 10 'bb 11}]
+                   [11 {'aa 10 'bb 11}]]))
+    (swap! store (constantly []))
+    (cleanup-kiln-success k)
+    (is (= @store [[22 10 11]
+                   [6 2 3]]))))
+
 
 (comment
 

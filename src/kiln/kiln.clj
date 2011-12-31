@@ -162,7 +162,7 @@
   (let [make-item (fn [i]
                     (cond
                      (symbol? i) {:item i :args nil}
-                     (seq i) {:item (first i) :args (rest i)}
+                     (seq i) {:item (first i) :args (vec (rest i))}
                      :otherwise (throw+ {:type :kiln-bad-item :which i})))
         items (map make-item glazes)]
     `(fn ~args ~(vec items))))
