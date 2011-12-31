@@ -211,7 +211,7 @@ manageable. It is built around these principles:
   :operation (if-not (valid-user? (?? user))
                (throw+ {:type :security-breach!
                         :user (?? user)
-                        :clay (?clay)})
+                        :clay ?clay})
                (?next)))
 
 ;; Of course, we need a view:
