@@ -240,15 +240,15 @@ manageable. It is built around these principles:
       result)))
 
 ;; So, at this point software engineer types will be pointing out that
-;; our dispatch, action!, and template clays are too interdependant.
-;; True. Let's try a minor refactor:
+;; some of our clays (namely dispatch, action!, and template) are too
+;; interdependent.  True. Let's try a minor refactor:
 
 (defclay dispatch-structure
   :value (condp = path
            "/remove-user" {:name :remove-user
                            :action! add-user!
                            :template "templates/logon"}
-           "/add-user" {:add-user
+           "/add-user" {:name :add-user
                         :action! remove-user!
                         :template "templates/show-user"}
            "/view-user" {:name :view-user
