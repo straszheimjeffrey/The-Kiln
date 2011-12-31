@@ -41,7 +41,7 @@
           glazes (reverse (if-let [gl (:glaze clay)] (gl) nil))]
       ((reduce apply-glaze clay-fun glazes)))
     (finally
-     (dosync (alter (:vals kiln) assoc (:id clay) nil)))))
+     (dosync (alter (:vals kiln) dissoc (:id clay))))))
 
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
