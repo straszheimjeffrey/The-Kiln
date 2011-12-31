@@ -200,7 +200,8 @@ manageable. It is built around these principles:
                (let [result (?next)]
                  (log level (format "Complete %s result: %s"
                                     clay-name
-                                    (str result))))))
+                                    (str result)))
+                 result)))
 
 ;; Of course, in a real application that would become more detailed.
 
