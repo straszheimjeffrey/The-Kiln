@@ -2,8 +2,7 @@
     ^{:doc "A new evaluation strategy for complex computations."
       :author "Jeffrey Straszheim"}
   kiln.kiln
-  (use slingshot.slingshot)
-  (require [clojure.walk :as walk]))
+  (use slingshot.slingshot))
 
 
 
@@ -128,15 +127,10 @@
 
 (defn- build-env-fun
   [form clay-sym other-args]
-  (let [clay-sym (or clay-sym (gensym "env"))
-        replace-fire (fn [f]
-                       (if (and (seq? f)
-                                (= (first f) '??))
-                         `(fire ~clay-sym ~(second f))
-                         f))]
-    `(fn
-       ~(vec (list* clay-sym other-args))
-       ~(walk/prewalk replace-fire form))))
+  (let [clay-sym (or clay-sym `env#)]
+    `(fn [~clay-sym ~@other-args]
+       (letfn [(~'?? [dep#] (fire ~clay-sym dep#))]
+         ~form))))
 
 (def ^:private allowed-clay-kws #{:id :name :value
                                  :pre-fire :kiln :glaze
