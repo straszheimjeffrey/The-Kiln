@@ -160,8 +160,33 @@
     (is (= @store [d k]))
     (is (= (fire k f) :override))
     (is (= @store [d k f]))))
-           
-  
+
+
+(deftest basic-arguments-test
+  (let [k (new-kiln)
+        store (atom [])
+        a (coal)
+        b (glaze :name b
+                 :operation (do
+                              (swap! store conj ?args)
+                              (?next)))
+        c (clay :name c
+                :args [fred mary]
+                :glaze [b]
+                :cleanup (do (swap! store conj ?self)
+                             (swap! store conj fred)
+                             (swap! store conj mary))
+                :value (+ (?? a) fred mary))]
+    (stoke-coal k a 1)
+    (is (= (fire k c 2 3) 6))
+    (is (= (fire k c 10 11) 22))
+    (is (= @store [{'fred 2 'mary 3}
+                   {'fred 10 'mary 11}]))
+    (swap! store (constantly []))
+    (cleanup-kiln-success k)
+    (is (= @store [22 10 11 6 2 3]))))
+
+
 (comment
 
 (run-tests)

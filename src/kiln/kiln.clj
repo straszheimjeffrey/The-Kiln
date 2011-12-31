@@ -102,12 +102,12 @@
     (doseq [clay-map @(:needs-cleanup kiln)]
       (let [clay (:clay clay-map)
             args (:args clay-map)
-            args-map (into {} (map (fn [a b] [a b]) (:args clay) args))
             funs (keep #(get clay %) keys)]
         (try
-          (let [result (fire kiln clay)]
+          (assert (apply clay-fired? kiln clay args))
+          (let [result (apply fire kiln clay args)]
             (doseq [fun funs]
-              (fun kiln result args-map)))
+              (apply fun kiln result args)))
           (catch Exception e
             (dosync (alter (:cleanup-exceptions kiln) conj e))))))))
       
@@ -183,7 +183,7 @@
                         (if-let [form (get data key)]
                           (assoc data key (build-env-fun form
                                                          env-id
-                                                         ['?self '?args]))
+                                                         (cons '?self args)))
                           data))
         data-map (if-let [glazes (:glaze data-map)]
                    (assoc data-map :glaze (wrap-glazes glazes args))
