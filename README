@@ -232,7 +232,7 @@ manageable. It is built around these principles:
     (stoke-coal kiln request)
     (let [result (try
                    (fire kiln action!) ; do the stuff
-                   (render-template (fire kiln template))
+                   (render-template (fire kiln template) ...other kiln data...)
                    (catch Exception e
                      (cleanup-kiln-failure kiln)
                      (throw e)))]
