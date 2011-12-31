@@ -60,9 +60,6 @@
      (if-not (::cleanup? kiln)
        (if (::clay? clay)
          (do
-           ;; run pre-fires
-           (when-let [pres (if-let [prf (:pre-fire clay)] (prf) nil)]
-             (doseq [pre pres] (fire kiln pre)))
            ;; compute and store result
            (let [result (run-clay kiln clay)]
              (dosync
@@ -139,7 +136,7 @@
        ~(walk/prewalk replace-fire form))))
 
 (def ^:private allowed-clay-kws #{:id :name :value
-                                 :pre-fire :kiln :glaze
+                                 :kiln :glaze
                                  :cleanup :cleanup-success :cleanup-failure
                                  :extra})
 
@@ -170,7 +167,6 @@
         (assoc ::clay? true)
         (assoc :fun (build-env-fun (:value data-map) env-id nil))
         (dissoc :value)
-        (wrap-if-present :pre-fire)
         (wrap-if-present :glaze)
         (build-cleanup :cleanup)
         (build-cleanup :cleanup-success)

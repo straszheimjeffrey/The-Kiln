@@ -30,9 +30,9 @@
 
 (defclay sally!
   "Double coal-2"
-  :pre-fire [bob]
   :cleanup (swap! (?? coal-2) (constantly []))
-  :value (swap! (?? coal-2) (fn [k] (vec (concat k k)))))
+  :value (do (?? bob)
+             (swap! (?? coal-2) (fn [k] (vec (concat k k))))))
   
 ;; A very basic test
 
