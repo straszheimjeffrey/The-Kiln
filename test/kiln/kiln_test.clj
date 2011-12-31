@@ -103,6 +103,21 @@
             (catch [:type :kiln-cleanup-exception] {:keys [exceptions]}
               (map (fn [e] (-> e .getData :object :value)) exceptions)))))))
 
+(deftest test-cleanup-order
+  (let [k (new-kiln)
+        cleanup-order (atom [])
+        cleaning! #(swap! cleanup-order conj %)
+        a (coal)
+        b (clay :value (inc (?? a)) :cleanup (cleaning! 'b))
+        c (clay :value (inc (?? b)) :cleanup (cleaning! 'c))
+        d (clay :value (+ (?? b) (?? c)) :cleanup (cleaning! 'd))]
+    (stoke-coal k a 42)
+    (fire k d)
+    (is (= [43 44 (+ 43 44)] (map (partial fire k) [b c d])))
+    (cleanup-kiln-success k)
+    (is (= '[c b d] @cleanup-order)
+        "cleanup should have happened in the reverse order of firing")))
+
 (defcoal qqq)
 (defclay yyy)
 
