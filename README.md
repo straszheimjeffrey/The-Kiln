@@ -40,13 +40,13 @@ Here are some specific complexity issues that I've found:
 * For each request, there is a large set of data that needs to be
   recomputed, such as (perhaps) a user-id, his session, a database
   connection, validation parameters, logging parameters, search
-  results, other kinds of results, and so on. I've found two things
+  results, other kinds of results, and so on. I've found a few things
   true about this mass of data:
     - Most of these items are computed zero or one times for each
       request.
     - Often the data you need in one part of the control flow isn't
       visible because it is created and consumed elsewhere.
-    - What you need to compute tends to not change much, but how you
+    - What you need to compute tends not to change much, but how you
       compute it often does. That is, new bits of data become
       relevant, requiring ever-growing argument lists (or worse, the
       heavy dependence of dynamic scope).
@@ -101,15 +101,15 @@ manageable. It is built around these principles:
 
 ## Usage
 
-    ;; To start with, you must create some "coal". Coals are your base
-    ;; values, the ones not computed from other things in the kiln. For a
-    ;; webapp, we'll use the request object.
+To start with, you must create some "coal". Coals are your base
+values, the ones not computed from other things in the kiln. For a
+webapp, we'll use the request object.
     
     (defcoal request "The request object")
     
-    ;; Don't worry that it's blank. We'll assign a value later.
+Don't worry that it's blank. We'll assign a value later.
     
-    ;; So, now we can compute stuff from that.
+So now we can compute stuff from that.
     
     (defclay uri
       "The URI of the request"
@@ -121,8 +121,8 @@ manageable. It is built around these principles:
       "The path"
       :value (.getPath (?? uri)))
     
-    ;; Dispatching is one of the first things you do in most
-    ;; frameworks. For now, we just dispatch on path.
+Dispatching is one of the first things you do in most frameworks. For
+now, we just dispatch on path.
     
     (defclay dispatch
       "What do I do?"
@@ -131,10 +131,10 @@ manageable. It is built around these principles:
                "/add-user" :add-user
                "/view-user" :view-user))
     
-    ;; Of course, as the application grows, dispatching will get more
-    ;; complex. No problem, just make the clay look at more stuff.
+Of course, as the application grows, dispatching will get more
+complex. No problem, just make the clay look at more stuff.
     
-    ;; We must match the dispatch to an action
+We must match the dispatch to an action
     
     (declare log)
     (declare security-check)
@@ -160,16 +160,16 @@ manageable. It is built around these principles:
                :view-user nil ; no changes!
                ))
     
-    ;; Here I'm assuming that the functions add-user and remove-user are
-    ;; already defined somewhere.
+Here I'm assuming that the functions `add-user` and `remove-user` are
+already defined somewhere.
     
-    ;; So, we need a database connection.
+Of course we need a database connection.
     
     (defclay db-con
       :value (get-db-con)
       :cleanup (close-db-con ?self))
     
-    ;; If you wanted to automatically manage transactioning, try this:
+If you wanted to automatically manage transactioning, try this:
     
     (defclay transactioned-db
       :value (get-transactioned-connection)
@@ -178,9 +178,9 @@ manageable. It is built around these principles:
       :cleanup-failure (do (rollback ?self)
                            (close-db-con ?self)))
     
-    ;; I won't detail user, but you can figure it out.
+I won't detail `user`, but you can figure it out.
     
-    ;; Let's look at glaze
+Let's look at glaze
     
     (defglaze log
       "Log an operation"
@@ -193,7 +193,7 @@ manageable. It is built around these principles:
                                         (str result)))
                      result)))
     
-    ;; Of course, in a real application that would become more detailed.
+Of course, in a real application that would become more detailed.
     
     (defglaze security-check
       "Throw if user not valid"
@@ -203,7 +203,7 @@ manageable. It is built around these principles:
                             :clay ?clay})
                    (?next)))
     
-    ;; Of course, we need a view:
+Now we need a view.
     
     (defclay template
       :value (condp = (?? dispatch)
@@ -211,9 +211,9 @@ manageable. It is built around these principles:
                :add-user "templates/show-user"
                :view-user "templates/show-user"))
     
-    ;; And so on.
+And so on.
     
-    ;; What does the driver look like:
+What does the driver look like? Here:
     
     (defn run-kiln
       [req]
@@ -228,9 +228,9 @@ manageable. It is built around these principles:
           (cleanup-kiln-success kiln)
           result)))
     
-    ;; So, at this point software engineer types will be pointing out that
-    ;; some of our clays (namely dispatch, action!, and template) are too
-    ;; interdependent.  True. Let's try a minor refactor:
+At this point I expect software engineer types will be pointing out
+that some of our clays (namely `dispatch`, `action!`, and `template`)
+are too interdependent.  True. Let's try a minor refactor:
     
     (defclay dispatch-structure
       :value (condp = (?? path)
@@ -255,7 +255,7 @@ manageable. It is built around these principles:
     (defclay template
       :value (:template (?? dispatch-structure)))
     
-    ;; Nice, eh?
+Nice, eh?
 
 
 ## Clays with arguments
