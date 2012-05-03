@@ -13,7 +13,7 @@
 
 ;; Some basic coals
 
-(defcoal coal-1 "Some bit of coal, and int")
+(defcoal coal-1 "Some bit of coal, an int")
 (defcoal coal-2 "Another bit of coal, an atom holding a vec")
 
 (defclay fred

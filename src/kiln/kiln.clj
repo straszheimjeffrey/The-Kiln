@@ -191,7 +191,7 @@ The allowed parameters are:
 
 :name - A symbol for debugging use, defaults to :id
 
-:value - the code to run to produce the value. Withing this code, any
+:value - the code to run to produce the value. Within this code, any
 form such as (?? a-clay optional-args...) will be converted to a
 command to fire that clay in the current kiln.
 
