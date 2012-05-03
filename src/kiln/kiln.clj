@@ -274,7 +274,32 @@ glaze first and the arguments following, like this:
 (def ^:private allowed-glaze-kws #{:id :name :kiln :operation :args})
 
 (defmacro glaze
-  "Build a glaze"
+  "Build a glaze. See the docstring for clay for the basic principles. Glazes allow the following to be defined:
+
+:id - as clay
+
+:name - as clay
+
+:kiln - as clay
+
+:args - as clay
+
+:operation - This stands in place of the clay :value. Inside, the
+(?? some-clay) syntax words, and the arguments are available. Also, the
+following symbols are defined:
+
+?next - a zero argument function. This is what you must call to
+compute the value of the surrounded clay. If you do not call it, the
+clay will not be evaluated. (Note: glazes form a
+chain. Calling (?next) will actually evaluate the next glaze within
+this one. When all glazes are computed, the clay itself is.)
+
+?clay The wrapped clay
+
+?args - A map of name-value pairs. These are the args that the *clay*
+was called with, which are seperate from the args that this glaze was
+called with.
+"
   [& glaze]
   (let [data-map (apply hash-map glaze)
         args (or (:args data-map) [])

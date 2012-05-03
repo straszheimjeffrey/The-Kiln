@@ -277,7 +277,7 @@ You can use it like this:
 
     (fire some-kiln a-clay-with-arguments 1 2)
 
-Which will return `3`. Also, at cleanup time, `(do-something 3 1 2)`
+Which will return `3`. Also at cleanup time `(do-something 3 1 2)`
 will be called. Note, this will only happen once. If you call it again
 with those same arguments, the same value is returned, but it is not
 recomputed. The cleanup is only called once.
