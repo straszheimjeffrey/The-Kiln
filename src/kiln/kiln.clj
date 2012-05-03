@@ -81,7 +81,9 @@
            (let [result (try
                           (dosync (alter (:vals kiln) assoc key ::running))
                           (run-clay-and-glazes kiln clay args)
-                          (finally (dosync (alter (:vals kiln) assoc key nil))))]
+                          (catch Throwable e
+                            (dosync (alter (:vals kiln) assoc key nil))
+                            (throw e)))]
              (dosync
               (alter (:vals kiln) assoc key result)
               (when (has-cleanup? clay)

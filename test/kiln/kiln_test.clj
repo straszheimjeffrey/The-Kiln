@@ -283,18 +283,30 @@
         c (clay :name c
                 :value [(?? a) (?? b)]
                 :transaction-allowed? true)
-        exception-thrown (atom false)
+        exception-thrown? (atom false)
         should-fail (fn [fun]
                       (do
                         (try+
                          (fun)
                          (catch Exception e
-                           (reset! exception-thrown true)))
-                        (is @exception-thrown)))]
+                           (reset! exception-thrown? true)))
+                        (is @exception-thrown?)))]
     (is (= (fire (new-kiln) c) [:fred :mary]))
     (should-fail #(dosync (fire (new-kiln) c)))
     (is (= (dosync (fire (new-kiln) a))
            :fred))))
+
+(deftest exceptions-unwrap-correctly
+  (let [k (new-kiln)
+        a (clay :name a
+                :value (throw+ {:type :exc}))
+        exception-thrown? (atom false)]
+    (try+
+     (fire k a)
+     (catch [:type :exc] _
+       (reset! exception-thrown? true)))
+    (is @exception-thrown?)
+    (is (-> k :vals deref vals first nil?))))
 
 (comment
 
