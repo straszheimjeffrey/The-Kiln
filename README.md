@@ -42,17 +42,14 @@ Here are some specific complexity issues that I've found:
   connection, validation parameters, logging parameters, search
   results, other kinds of results, and so on. I've found two things
   true about this mass of data:
-
-    1. Most of these items are computed zero or one times for each
-       request.
-
-    2. Often the data you need in one part of the control flow isn't
-       visible because it is created and consumed elsewhere.
-
-    3. What you need to compute tends to not change much, but how you
-       compute it often does. That is, new bits of data become
-       relevant, requiring ever-growing argument lists (or worse, the
-       heavy dependence of dynamic scope).
+    - Most of these items are computed zero or one times for each
+      request.
+    - Often the data you need in one part of the control flow isn't
+      visible because it is created and consumed elsewhere.
+    - What you need to compute tends to not change much, but how you
+      compute it often does. That is, new bits of data become
+      relevant, requiring ever-growing argument lists (or worse, the
+      heavy dependence of dynamic scope).
 
 * The classic problem, "I need this here, but I have to thread it
   through a dozen functions to get it," becomes legion. Dynamic
