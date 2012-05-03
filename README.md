@@ -134,7 +134,8 @@ now, we just dispatch on path.
 Of course, as the application grows, dispatching will get more
 complex. No problem, just make the clay look at more stuff.
     
-We must match the dispatch to an action
+We must match the dispatch to an action. (Ignore the `:glaze` stuff
+for now. We will explain it below.)
     
     (declare log)
     (declare security-check)
@@ -168,6 +169,9 @@ Of course we need a database connection.
     (defclay db-con
       :value (get-db-con)
       :cleanup (close-db-con ?self))
+
+As above, I assume `get-db-con` and `close-db-con` are functions
+defined somewhere.
     
 If you wanted to automatically manage transactioning, try this:
     
@@ -193,7 +197,12 @@ Let's look at some glaze.
                                         (str result)))
                      result)))
     
-Of course, in a real application that would become more detailed.
+Here, the `(?next)` call is where the magic happens. It computes and
+returns the value of the enclosed clay. (In reality it may call
+another glaze. They act as a chain.) Notice also that you can access
+the enclosed `?clay`. You can also see its `?args` (not shown).
+
+Here is the `security-check` glaze:
     
     (defglaze security-check
       "Throw if user not valid"
@@ -202,6 +211,10 @@ Of course, in a real application that would become more detailed.
                             :user (?? user)
                             :clay ?clay})
                    (?next)))
+
+These run as wrappers around the various clays that include them. This
+allows you to factor out common behavior, much as you would with
+aspects or middleware or the like.
     
 Now we need a view.
     
@@ -213,7 +226,7 @@ Now we need a view.
     
 And so on.
     
-What does the driver look like? Here:
+What does the driver look like? This should work:
     
     (defn run-kiln
       [req]
@@ -227,10 +240,17 @@ What does the driver look like? Here:
                          (throw e)))]
           (cleanup-kiln-success kiln)
           result)))
+
+Here, `(new-kiln)` returns an empty kiln, the `(stoke-coal ...)` sets
+the value of the request (remember we mentioned that above). And the
+`(fire ...)` commands actually compute the values. Since the kiln is
+stateful, calling `(fire kiln template)` will *not* recompute the
+various intermediate values that were already computed when we called
+`(fire kiln action!)`.
     
-At this point I expect software engineer types will be pointing out
-that some of our clays (namely `dispatch`, `action!`, and `template`)
-are too interdependent.  True. Let's try a minor refactor:
+At this point I expect software engineer types will point out that
+some of our clays (namely `dispatch`, `action!`, and `template`) are
+too interdependent.  True. Let's try a minor refactor:
     
     (defclay dispatch-structure
       :value (condp = (?? path)
