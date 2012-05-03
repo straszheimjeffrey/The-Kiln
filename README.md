@@ -1,7 +1,7 @@
 # The Kiln
   
 The Kiln is designed to make large complex functions easier to
-write. By "large and complex", I mean things such as web applications,
+write. By "large and complex," I mean things such as web applications,
 where you do not compute a single, simple result for a well-defined
 input, but instead a very complex set of outputs along with
 side-effects.
@@ -80,7 +80,7 @@ manageable. It is built around these principles:
   called a "kiln". You can create and destroy kilns at will. (In a
   webapp, the idea is that you create one kiln per request.)
 
-* Clays are computed lazily.
+* Within the kiln, clays are computed lazily.
 
 * Clays know how to cleanup after themselves. If your database
   connection is a clay, it will get closed at the end of the request.
