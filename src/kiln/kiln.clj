@@ -79,7 +79,7 @@
            (let [result (try
                           (dosync (alter (:vals kiln) assoc key ::running))
                           (run-clay kiln clay args)
-                          (finally (dosync (alter (:vals kiln) assoc key nil))))]
+                          (finally (dosync (alter (:vals kiln) dissoc key))))]
              (dosync
               (alter (:vals kiln) assoc key result)
               (when (has-cleanup? clay)

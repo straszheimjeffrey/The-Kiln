@@ -54,6 +54,17 @@
     (cleanup-kiln-success k)
     (is (= @store []))))
 
+(deftest test-errors-retry
+  (let [k (new-kiln)
+        tick (atom 0)
+        bomb (clay :value (do (swap! tick inc) (throw+ ::whatever)))]
+    (is (try+ (fire k bomb), false
+              (catch (= % ::whatever) _ true)))
+    (is (try+ (fire k bomb), false
+              (catch (= % ::whatever) _ true))
+        "happens again")
+    (is (= 2 @tick) "tried to compute again")))
+
 (deftest test-cleanups
   (let [k1 (new-kiln)
         k2 (new-kiln)
