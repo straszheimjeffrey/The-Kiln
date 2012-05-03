@@ -273,7 +273,28 @@
     (fire k e)
     (is (= @store [5 3]))))
                  
-
+(deftest transactioned-test
+  (let [a (clay :name a
+                :value :fred
+                :transaction-allowed? true)
+        b (clay :name b
+                :value :mary
+                :transaction-allowed? false)
+        c (clay :name c
+                :value [(?? a) (?? b)]
+                :transaction-allowed? true)
+        exception-thrown (atom false)
+        should-fail (fn [fun]
+                      (do
+                        (try+
+                         (fun)
+                         (catch Exception e
+                           (reset! exception-thrown true)))
+                        (is @exception-thrown)))]
+    (is (= (fire (new-kiln) c) [:fred :mary]))
+    (should-fail #(dosync (fire (new-kiln) c)))
+    (is (= (dosync (fire (new-kiln) a))
+           :fred))))
 
 (comment
 

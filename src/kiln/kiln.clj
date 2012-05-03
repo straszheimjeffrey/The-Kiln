@@ -33,8 +33,8 @@
   (or (:cleanup clay)
       (:cleanup-success clay)
       (:cleanup-failure clay)))
-
-(defn- run-clay
+  
+(defn- run-clay-and-glazes
   [kiln clay args]
   (if-let [glazes (:glaze clay)]
     ;; Run with glazes
@@ -55,13 +55,15 @@
       ((reduce apply-glaze clay-fun glazes)))
     ;; Simple non-glazed run
     (apply (:fun clay) kiln args)))
-  
+    
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
   [kiln clay & args] ; the clay can be a coal
   {:pre [(::kiln? kiln)
          (or (::clay? clay) (::coal? clay))
          (= (count args) (count (:args clay)))]}
+  (when-not (:transaction-allowed? clay)
+    (io! "Non-transactional clay evaluated within transaction."))
   (let [key (clay-key clay args)
         value (get @(:vals kiln) key ::value-of-clay-not-found)]
     (cond
@@ -78,7 +80,7 @@
            ;; compute and store result
            (let [result (try
                           (dosync (alter (:vals kiln) assoc key ::running))
-                          (run-clay kiln clay args)
+                          (run-clay-and-glazes kiln clay args)
                           (finally (dosync (alter (:vals kiln) assoc key nil))))]
              (dosync
               (alter (:vals kiln) assoc key result)
@@ -174,9 +176,9 @@
 
 
 (def ^:private allowed-clay-kws #{:id :name :value
-                                 :kiln :glaze :args
-                                 :cleanup :cleanup-success :cleanup-failure
-                                 :extra})
+                                  :kiln :glaze :args :transaction-allowed?
+                                  :cleanup :cleanup-success :cleanup-failure
+                                  :extra})
 
 (defmacro clay
   "Builds a clay object. The arguments are alternating key-values, like this:
@@ -203,6 +205,9 @@ this symbol.
 :args - a vec of symbols, the arguments that can be passed to this
 clay. The args are visible within the :value, the :cleanups, and
 the :glaze list.
+
+:transaction-allowed? - if true, this clay can be evaluated within a
+dosync block, otherwise will fail as in core/io!.
 
 :cleanup, :cleanup-success, :cleanup-failure - code to run at cleanup
 time. :cleanup always runs, followed by either :cleanup-success

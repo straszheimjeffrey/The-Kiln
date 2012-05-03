@@ -256,11 +256,42 @@ manageable. It is built around these principles:
       :value (:template (?? dispatch-structure)))
     
     ;; Nice, eh?
+
+
+## Mixing Clays With Transactions
+
+By default, a clay cannot be evaluated with a dosync block. So code
+like this will not work:
+
+    (dosync (fire some-kiln some-clay))
+
+This also will fail:
+
+    (defclay some-clay
+      :value (let [value (dosync (?? another-clay))]
+                (something value)))
+
+The reason for this is because the actual firing of the clays, and the
+internal maintainance of the kiln themselves use transactions. If they
+are wrapped within a dosync, there seems a high likelyhood that
+rollbacks will leave clays getting computed multiple times, thus
+causing errors in the side effects. It seems wise to just dissallow it
+by default.
+
+However, there may be times when you simply need a series of clays to
+be transactional. In this case, they can be marked
+`transaction-allowed?`, which will override this behavior.
+
+    (defclay some-transactioned-clay
+      :value (do-something (?? another-clay))
+      :transaction-allowed? true)
+
+Now `(dosync (fire some-kiln some-transactioned-clay))` will
+work. Note, however, that another-clay must also be thus defined.
     
     
 ## TODO
 
-* Dosync handling rules for clay.
 * Dynamic Glaze.
 * Cleanup for Glaze.
 
