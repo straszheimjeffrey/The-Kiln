@@ -258,6 +258,47 @@ manageable. It is built around these principles:
     ;; Nice, eh?
 
 
+## Clays with arguments
+
+The basic idea of a clay is that it is a single named value that is
+available throughout your computation (e.g. a web request). However,
+sometimes you will want to define a clay whose behavior can vary on
+arguments. Doing this will make a clay behave somewhat like a memoized
+function, except the memoization is local to the specific kiln.
+
+It looks like this:
+
+    (defclay a-clay-with-arguments
+       :args [a b]
+       :value (+ a b)
+       :cleanup (do-something ?self a b))
+
+You can use it like this:
+
+    (fire some-kiln a-clay-with-arguments 1 2)
+
+Which will return `3`. Also, at cleanup time, `(do-something 3 1 2)`
+will be called. Note, this will only happen once. If you call it again
+with those same arguments, the same value is returned, but it is not
+recomputed. The cleanup is only called once.
+
+On the other hand, if you do this
+
+    (do
+      (fire some-kiln a-clay-with-arguments 1 2)
+      (fire some-kiln a-clay-with-arguments 2 3))
+
+the computation will happen twice, as well as the cleanup.
+
+Note that the kiln must remember each invocation, so if you call a
+kiln a very large number of times with different arguments, all of
+those values (along with the arguments) are stored in the kiln. If you
+must do this, you may be better off with a function.
+
+Glazes can also take arguments. The `log` glaze in the above example
+shows how.
+
+
 ## Mixing Clays With Transactions
 
 By default, a clay cannot be evaluated with a dosync block. So code
