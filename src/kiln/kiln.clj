@@ -285,8 +285,8 @@ glaze first and the arguments following, like this:
 :args - as clay
 
 :operation - This stands in place of the clay :value. Inside, the
-(?? some-clay) syntax words, and the arguments are available. Also, the
-following symbols are defined:
+(?? some-clay) syntax works, and the arguments are available. Also,
+the following symbols are defined:
 
 ?next - a zero argument function. This is what you must call to
 compute the value of the surrounded clay. If you do not call it, the
