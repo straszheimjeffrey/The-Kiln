@@ -180,7 +180,7 @@ If you wanted to automatically manage transactioning, try this:
     
 I won't detail `user`, but you can figure it out.
     
-Let's look at glaze
+Let's look at some glaze.
     
     (defglaze log
       "Log an operation"
