@@ -115,7 +115,7 @@ So now we can compute stuff from that.
       "The URI of the request"
       :value (:uri (?? request)))
     
-    ;; Note the ?? syntax. It will automaticall lookup the request.
+Note the `??` syntax. It will automaticall lookup the request.
     
     (defclay path
       "The path"
