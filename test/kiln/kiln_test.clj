@@ -30,7 +30,7 @@
 
 (defclay sally!
   "Double coal-2"
-  :cleanup (swap! (?? coal-2) (constantly []))
+  :cleanup (reset! (?? coal-2) [])
   :value (do (?? bob)
              (swap! (?? coal-2) (fn [k] (vec (concat k k))))))
   
@@ -70,7 +70,7 @@
     (fire k1 three)
     (cleanup-kiln-success k1)
     (is (= @store [2 1]))
-    (swap! store (constantly []))
+    (reset! store [])
     (stoke-coal k2 coal-2 store)
     (fire k2 one)
     (fire k2 two)
@@ -215,7 +215,7 @@
     (is (= (fire k c 10 11) 22))
     (is (= @store [{'fred 2 'mary 3}
                    {'fred 10 'mary 11}]))
-    (swap! store (constantly []))
+    (reset! store [])
     (cleanup-kiln-success k)
     (is (= @store [22 10 11 6 2 3]))))
 
@@ -246,7 +246,7 @@
                    [3 {'aa 2 'bb 3}]
                    [10 5 {'aa 10 'bb 11}]
                    [11 {'aa 10 'bb 11}]]))
-    (swap! store (constantly []))
+    (reset! store [])
     (cleanup-kiln-success k)
     (is (= @store [[22 10 11]
                    [6 2 3]]))))
@@ -307,6 +307,26 @@
        (reset! exception-thrown? true)))
     (is @exception-thrown?)
     (is (-> k :vals deref vals first nil?))))
+
+(deftest test-unsafe-set-clay!!
+  (let [k (new-kiln)
+        store (atom [])
+        a (clay :name a
+                :value :fred
+                :cleanup (swap! store conj :a))
+        b (clay :name b
+                :args [fred ethel]
+                :value (+ fred ethel)
+                :cleanup (swap! store conj :b))]
+    (unsafe-set-clay!! k a :mary)
+    (unsafe-set-clay!! k b 0 0 1)
+    (unsafe-set-clay!! k b 1 1 4)
+    (is (= (fire k a) :mary))
+    (is (= (fire k b 0 0) 1))
+    (is (= (fire k b 1 1) 4))
+    (is (= (fire k b 10 20) 30))
+    (cleanup-kiln-success k)
+    (is (= @store [:b]))))
 
 (comment
 

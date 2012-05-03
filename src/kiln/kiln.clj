@@ -28,8 +28,21 @@
   (dosync
    (alter (:vals kiln) assoc (clay-key coal nil) val)))
 
-(defn- has-cleanup?
-  [clay]
+(defn unsafe-set-clay!!
+  "This will set the value of a clay within the kiln without
+evaluating it. It is intended mostly for testing (which means it will
+be abused). Note the value is the last argument. Any others between
+clay and the last are considered the clay's arguments."
+  [kiln clay & args-and-val]
+  {:pre [(::kiln? kiln)
+         (::clay? clay)
+         (= (count args-and-val) (+ 1 (count (:args clay))))]}
+  (let [val (last args-and-val)
+        args (butlast args-and-val)]
+    (dosync
+     (alter (:vals kiln) assoc (clay-key clay args) val))))
+
+(defn- has-cleanup?  [clay]
   (or (:cleanup clay)
       (:cleanup-success clay)
       (:cleanup-failure clay)))
@@ -290,9 +303,9 @@ the following symbols are defined:
 
 ?next - a zero argument function. This is what you must call to
 compute the value of the surrounded clay. If you do not call it, the
-clay will not be evaluated. (Note: glazes form a
-chain. Calling (?next) will actually evaluate the next glaze within
-this one. When all glazes are computed, the clay itself is.)
+clay will not be evaluated. (Note, glazes form a chain. Calling
+(?next) will actually evaluate the next glaze within this one.  When
+all glazes are computed, the clay itself is.)
 
 ?clay The wrapped clay
 
