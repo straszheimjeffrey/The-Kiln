@@ -171,7 +171,8 @@ Of course we need a database connection.
       :cleanup (close-db-con ?self))
 
 As above, I assume `get-db-con` and `close-db-con` are functions
-defined somewhere.
+defined somewhere. Also, note that `?self` is the value computed by
+the clay. You can see it during cleanup.
     
 If you wanted to automatically manage transactioning, try this:
     
