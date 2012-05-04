@@ -47,28 +47,6 @@ clay and the last are considered the clay's arguments."
       (:cleanup-success clay)
       (:cleanup-failure clay)))
   
-(defn- run-clay-and-glazes
-  [kiln clay args]
-  (if-let [glazes (:glaze clay)]
-    ;; Run with glazes
-    (let [args-map (into {} (map (fn [a b] [a b]) (:args clay) args))
-          clay-fun (fn [] (apply (:fun clay) kiln args))
-          apply-glaze (fn [next gl-map]
-                        (let [gl (:item gl-map)
-                              gl-args (:args gl-map)]
-                          (assert (::glaze? gl))
-                          (fn []
-                            (apply (:operation gl)
-                                   kiln
-                                   clay
-                                   next
-                                   args-map
-                                   gl-args))))
-          glazes (reverse (apply glazes kiln args))]
-      ((reduce apply-glaze clay-fun glazes)))
-    ;; Simple non-glazed run
-    (apply (:fun clay) kiln args)))
-    
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
   [kiln clay & args] ; the clay can be a coal
@@ -93,7 +71,7 @@ clay and the last are considered the clay's arguments."
            ;; compute and store result
            (let [result (try
                           (dosync (alter (:vals kiln) assoc key ::running))
-                          (run-clay-and-glazes kiln clay args)
+                          (apply (:fun clay) kiln clay args)
                           (catch Throwable e
                             (dosync (alter (:vals kiln) assoc key nil))
                             (throw e)))]
@@ -168,7 +146,7 @@ clay and the last are considered the clay's arguments."
 
 (defn- wrap-fires
   [kiln-sym form]
-  `(letfn [(~'?? [dep# & args#] (apply fire ~kiln-sym dep# args#))]
+  `(letfn [(~'?? [clay# & args#] (apply fire ~kiln-sym clay# args#))]
      ~form))
 
 (defn- build-env-fun
@@ -178,18 +156,39 @@ clay and the last are considered the clay's arguments."
      ~(wrap-fires kiln-sym form)))
 
 (defn- wrap-glazes
-  [glazes kiln-sym args]
-  (let [make-item (fn [i]
-                    (cond
-                     (symbol? i) {:item i :args nil}
-                     (seq i) {:item (first i) :args (vec (rest i))}
-                     (::clay? i) {:item i :args nil}
-                     :otherwise (throw+ {:type :kiln-bad-glaze :which i})))
-        items (map make-item glazes)
-        items (wrap-fires kiln-sym (vec items))]
-    `(fn [~kiln-sym ~@args] ~items)))
-
-
+  [glazes value kiln-sym args]
+  (let [clay-sym (gensym "clay")
+        args-sym (gensym "args")
+        glaze-item
+        (fn [glaze-reference next-sym]
+          (let [[glaze-symb glaze-args]
+                (cond
+                 (symbol? glaze-reference) [glaze-reference nil]
+                 (seq glaze-reference) [(first glaze-reference)
+                                        (rest glaze-reference)])]
+            `((:operation ~glaze-symb)
+              ~kiln-sym
+              ~clay-sym
+              ~next-sym
+              ~args-sym
+              ~@glaze-args)))
+        combine
+        (fn [inner-form glaze-form]
+          (let [next-sym (gensym "next")]
+            `(let [~next-sym (fn [] ~inner-form)]
+               ~(glaze-item glaze-form next-sym))))
+        wrap-if-glazes-present
+        (fn [form]
+          (if (empty? glazes)
+            form
+            `(let [~args-sym (apply hash-map (interleave '~args
+                                                         (list ~@args)))]
+               ~form)))]
+    (->
+     (reduce combine value glazes)
+     wrap-if-glazes-present
+     (build-env-fun kiln-sym (list* clay-sym args)))))
+  
 (def ^:private allowed-clay-kws #{:id :name :value
                                   :kiln :glaze :args :transaction-allowed?
                                   :cleanup :cleanup-success :cleanup-failure
@@ -243,7 +242,7 @@ glaze first and the arguments following, like this:
        :value (+ an-arg (?? a-different-clay another-arg)))"
   [& clay]
   (let [data-map (apply hash-map clay)
-        kiln-sym (or (:kiln data-map) (gensym "env"))
+        kiln-sym (or (:kiln data-map) (gensym "kiln"))
         args (or (:args data-map) [])
         build-cleanup (fn [data key]
                         (if-let [form (get data key)]
@@ -251,9 +250,10 @@ glaze first and the arguments following, like this:
                                                          kiln-sym
                                                          (cons '?self args)))
                           data))
-        data-map (if-let [glazes (:glaze data-map)]
-                   (assoc data-map :glaze (wrap-glazes glazes kiln-sym args))
-                   data-map)
+        fun (wrap-glazes (-> data-map :glaze reverse)
+                         (:value data-map)
+                         kiln-sym
+                         args)
         set-symb (fn [data key val]
                    (let [symb (or (get data key) val)]
                      (assoc data key (list 'quote symb))))
@@ -265,8 +265,9 @@ glaze first and the arguments following, like this:
         (set-symb :id id)
         (set-symb :name id)
         (assoc ::clay? true)
-        (assoc :fun (build-env-fun (:value data-map) kiln-sym args))
+        (assoc :fun fun)
         (dissoc :value)
+        (dissoc :glaze)
         (build-cleanup :cleanup)
         (build-cleanup :cleanup-success)
         (build-cleanup :cleanup-failure))))
@@ -298,14 +299,20 @@ glaze first and the arguments following, like this:
 :args - as clay
 
 :operation - This stands in place of the clay :value. Inside, the
-(?? some-clay) syntax works, and the arguments are available. Also,
-the following symbols are defined:
+
+ (?? some-clay)
+
+syntax works, and the arguments are available. Also, the following
+symbols are defined:
 
 ?next - a zero argument function. This is what you must call to
 compute the value of the surrounded clay. If you do not call it, the
-clay will not be evaluated. (Note, glazes form a chain. Calling
-(?next) will actually evaluate the next glaze within this one.  When
-all glazes are computed, the clay itself is.)
+clay will not be evaluated. Note: glazes form a chain. Calling
+
+ (?next)
+
+will actually evaluate the next glaze within this one.  When all
+glazes are computed, the clay itself is.
 
 ?clay The wrapped clay
 
@@ -318,7 +325,7 @@ called with.
         args (or (:args data-map) [])
         id (or (:id data-map) (gensym "glaze-"))
         name (or (:name data-map) id)
-        kiln-sym (or (:kiln data-map) (gensym "env"))]
+        kiln-sym (or (:kiln data-map) (gensym "kiln"))]
     (when-let [bads (bad-keys data-map allowed-glaze-kws)]
       (throw+ {:type :kiln-bad-key :keys bads :glaze glaze}))
     {::glaze? true
