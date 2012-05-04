@@ -354,6 +354,7 @@ work. Note, however, that another-clay must also be thus defined.
     
 ## TODO
 
+* Better sensing transactional status
 * Dynamic Glaze.
 * Cleanup for Glaze.
 
