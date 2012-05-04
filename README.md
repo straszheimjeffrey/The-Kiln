@@ -27,7 +27,7 @@ code that must be run on each request.
 
 In my experience, the size of such applications seems to grow linearly
 with time, as product managers dream up more features to add and more
-complex ways for them to interact. Such as, "Hey, now that you've
+complex ways for them to interact. Such as, they will say, "Hey, now that you've
 added a reward points system, can we hook it into the product
 recommendation system, so that the products with eligible bonuses
 appear higher?"
@@ -40,7 +40,7 @@ Here are some specific complexity issues that I've found:
 * For each request, there is a large set of data that needs to be
   recomputed, such as (perhaps) a user-id, his session, a database
   connection, validation parameters, logging parameters, search
-  results, other kinds of results, and so on. I've found a few things
+  results, other query results, and so on. I've found a few things
   true about this mass of data:
     - Most of these items are computed zero or one times for each
       request.
@@ -113,9 +113,11 @@ So now we can compute stuff from that.
     
     (defclay uri
       "The URI of the request"
-      :value (:uri (?? request)))
+      :value (build-uri (?? request)))
     
-Note the `??` syntax. It will automaticall lookup the request.
+Here we assume you have some function `build-uri` that, when given a request
+object, will from it compute a URI. Also note the `??` syntax. It will automatically
+lookup the request.
     
     (defclay path
       "The path"
