@@ -131,6 +131,21 @@
     (is (= 1 @cleaned?)
         "cleaned external-rs once, but never internal-rs")))
 
+(deftest test-repeated-cleanup
+  (let [k (new-kiln)
+        store (atom [])
+        a (clay :name a
+                :value :a
+                :cleanup (swap! store conj :cleanup)
+                :cleanup-success (swap! store conj :success)
+                :cleanup-failure (swap! store conj :failure))]
+    (fire k a)
+    (cleanup-kiln-failure k)
+    (is (= @store [:cleanup :failure]))
+    (cleanup-kiln-success k)
+    (is (= @store [:cleanup :failure])
+        "No extra cleaning after first")))
+
 (defcoal qqq)
 (defclay yyy)
 
