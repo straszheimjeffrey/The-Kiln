@@ -101,6 +101,8 @@ manageable. It is built around these principles:
 
 ## Usage
 
+If you use Leiningen, add this to your project.clj:
+
 ````clojure
 [kiln "0.0.2"]
 ````
