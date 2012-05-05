@@ -19,33 +19,38 @@
 
 ;; To start, we need a main response clay.
 
-(use 'clojure.pprint)
-(declare redirect-response page-to-show log-glaze)
+(declare redirect-response page-to-show)
 
 (defclay response-clay
   "The main Ring response."
+  :glaze [(log-glaze :info :show-result? false)]
+  
   :value (do
-           ;; The response is either a page or an action followed by a
-           ;; redirect.
-           (pprint (?? request))
            (info (format "Begin Request: %s"
                          (-> request-uri ?? str)))
            (try+
-             (let [response (condp = (?? response-type)
-                              :redirect (?? redirect-response)
-                              :page (response (?? page-to-show))
-                              :not-found (not-found "Page not found"))]
-               (if-let [new-session (?? new-session)]
-                 (assoc response :session new-session)
-                 response))
-             (catch [:type :forced-redirect] {:keys [uri]}
-               (info (format "Forced redirect to %s" (str uri)))
-               (redirect-after-post (str uri)))
-             (catch [:type :error-page] {:keys [message]}
-               ;; for now
-               (response (format "Error: %s" message)))))
-  :glaze [(log-glaze :info)])
-
+            
+            ;; The response is either a page or an action followed by
+            ;; a redirect.
+            (let [response (condp = (?? response-type)
+                             :redirect (?? redirect-response)
+                             :page (response (?? page-to-show))
+                             :not-found (not-found "Page not found"))]
+              (if-let [new-session (?? new-session)]
+                
+                ;; We may need to update the session
+                (assoc response :session new-session)
+                response))
+            
+            ;; These are a couple short-circuit operation handled by
+            ;; exceptions
+            (catch [:type :forced-redirect] {:keys [uri]}
+              (info (format "Forced redirect to %s" (str uri)))
+              (redirect-after-post (str uri)))
+            (catch [:type :error-page] {:keys [message]}
+              ;; for now
+              (response (format "Error: %s" message))))))
+  
 (defclay redirect-response
   :value (do (when-let [action-to-run! (?? action!)]
                (?? action-to-run!))
@@ -81,20 +86,10 @@
               [:a {:href (-> logoff-uri ?? str)} "(logoff)"]
               [:a {:href (-> logon-uri ?? str)} "(logon)"])]]))
 
-(defglaze log-glaze
-  :args [log-level]
-  :operation (let [clay-name (:name ?clay)]
-               (log log-level (format "Running %s" clay-name))
-               (let [result (?next)]
-                 (log log-level (format "Completed %s: %s"
-                                        clay-name
-                                        (pr-str result)))
-                 result)))
-                
 (defn- on-error
   [exc kiln]
   (error exc "Exception in Kiln")
-  (if (instance? Exception kiln)
+  (if (instance? Exception exc)
     ;; Handle java.lang.Exception gracefully
     (do (cleanup-kiln-failure)
         (-> (response "An error occurred")
