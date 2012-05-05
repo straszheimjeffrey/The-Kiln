@@ -13,22 +13,32 @@
 ;; This is the main dispatch logic for a Kiln-Ring Restful Web
 ;; Server.
 
+;; The thing to notice in this code is this: it does not evaluate any
+;; business logic clay. It will use requst oriented clays, such as the
+;; URI. But clays that actually do the application work are not
+;; called. The reason for this is simple: we have to calculate the
+;; dispatch *before* we can compute the business logic.
+
 (declare main-dispatch)
 
+;; First are some basic dispatch clays. You saw how some of these get
+;; used in sample.response.
+
 (defclay response-type
-  "How to respond"
+  "How to respond. :page, :redirect, or :not-found."
   :value (-> main-dispatch ?? :response-type))
 
 (defclay redirect-uri
-  "The uri to redirect to."
+  "If this is a redirect, where should we go? Returns a
+kiln-ring.uri-utils.uri."
   :value (-> main-dispatch ?? :redirect-uri ??))
 
 (defclay action!
-  "The action to perform."
+  "The action to perform. A clay."
   :value (-> main-dispatch ?? :action))
 
 (defclay new-session
-  "Any update to the session"
+  "A new session, if it changes. Or else nil."
   :value (when-let [ns (-> main-dispatch ?? :new-session)]
            (?? ns)))
 
@@ -40,11 +50,23 @@
   "The main body of the page"
   :value (-> main-dispatch ?? :body ??))
 
+;; Next, we are going to crack apart the request and make a nice
+;; object to dispatch on. What we want is to turn a request like this:
 
-(declare path-as-seq
-         main-matches
-         logon-matches
-         message-matches)
+;; http://www.example.com/fred/mary/sue
+
+;; into this
+
+;; [:get "fred" "mary" "sue"]
+
+;; Obviously that will be :post if needed.
+
+(defclay path-as-seq
+  "The path of the request split on /'s, to form a vec"
+  :value (let [path (:uri (?? request))]
+           (->> (partition-by #(= % \/) path)
+                (map (partial apply str))
+                (remove #{"/"}))))
 
 (defclay dispatch-request-method-and-path
   "A seq with the request request method followed by the path
@@ -54,12 +76,30 @@ components, such as:
   :value (cons (?? request-method)
                (?? path-as-seq)))
 
+
+;; Almost ready for the hard parts!
+
+(declare main-matches
+         logon-matches
+         message-matches)
+
+;; We break the dispatches in to three groups: main, logon, and
+;; message. This is just to make the code easier to keep track of.
+
 (defclay main-dispatch
   "The main uri dispatch"
   :value (or (?? main-matches)
              (?? logon-matches)
              (?? message-matches)
              {:response-type :not-found}))
+
+
+;; We're going to use the Matchure library to actually select and bind
+;; the request data. Since the Matcure syntax is (shall we say)
+;; verbose, I have build a convinience macro to make the dispatcher
+;; easier to follow. Like most macros, it is tricky (look what I did
+;; with the ~'??), but I believe the actual dispatch code is easy to
+;; read.
 
 (defmacro dispatch-clay
   [name & forms]
@@ -72,14 +112,29 @@ components, such as:
              `([~pattern (~'?? dispatch-request-method-and-path)] ~result))
            (apply concat))))))
 
+
+;; Only one of these. It matches a URI without a path.
 (dispatch-clay
  main-matches
+ ;; For an empty path, redirect them to either the logon page, or the
+ ;; message list page, depending on if they are logged on.
  [:get] {:response-type :redirect
          :action nil
          :redirect-uri (if (?? logged-on?)
                          list-messages-uri
                          logon-uri)})
- 
+
+;; Stop and notice something! Look at the :redirect-uri field
+;; above. That result (which is either list-messages-uri or logon-uri)
+;; is a clay. But we do not evaluate it now. If we tried, it would go
+;; into a loop, since they each need the output of the dispatcher. But
+;; we *are* the dispatcher. For now return the clays and let someone
+;; else evaluate them.
+
+
+;; Logon and logoff. These have action and body clays. Like the URI
+;; clays above, we return them, but do not call them. The definition
+;; of these clays are in the sample.logon module.
 (dispatch-clay
  logon-matches
  [:post "logon"] {:response-type :redirect
@@ -97,6 +152,7 @@ components, such as:
                    :new-session logoff-new-session
                    :redirect-uri logoff-redirect-uri})
 
+;; These return the clays form the sample.message module.
 (dispatch-clay
   message-matches
   [:get "list-messages"] {:response-type :page
@@ -120,13 +176,6 @@ components, such as:
                                  :action edit-message-action!
                                  :redirect-uri edit-message-redirect-uri
                                  :message-id which})
-
-(defclay path-as-seq
-  "The path of the request split on /'s, to form a vec"
-  :value (let [path (:uri (?? request))]
-           (->> (partition-by #(= % \/) path)
-                (map (partial apply str))
-                (remove #{"/"}))))
 
 
 ;; End of file
