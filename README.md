@@ -104,7 +104,7 @@ manageable. It is built around these principles:
 If you use Leiningen, add this to your project.clj:
 
 ````clojure
-[kiln "0.0.2"]
+[kiln "1.0.0"]
 ````
 
 To start with, you must create some "coal". Coals are your base
