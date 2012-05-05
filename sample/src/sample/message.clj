@@ -35,9 +35,11 @@
               [:ul.messages
                (for [{:keys [key owner header]} ml]
                  [:li
-                  [:p.header (h header)]
-                  [:p.owner (h owner)]
-                  [:p.link
+                  [:span.header (h header)]
+                  [:br]
+                  [:span.owner
+                   "by: " (h owner)
+                   [:br]
                    [:a {:href (->
                                (?? uri-with-path (format "/show-message/%s" key))
                                str)}
@@ -50,16 +52,16 @@
 (defclay show-message-body
   :glaze [require-logged-on]
   :value (let [{:keys [key owner header content]} (md/get-message (?? message-id))]
-           [:table
-            [:tr [:th.header (h header)]]
-            [:tr [:td.owner (h owner)]]
-            [:tr [:td.content (h content)]]
+           [:ul
+            [:li.header (h header)]
+            [:li.owner "by " (h owner)]
+            [:li.body (h content)]
             (when (?? my-message?)
-              [:tr [:td.link [:a {:href (->
-                                         (?? uri-with-path
-                                             (format "/edit-message/%s" key))
-                                         str)}
-                              "(edit message)"]]])]))
+              [:li [:a {:href (->
+                               (?? uri-with-path
+                                   (format "/edit-message/%s" key))
+                               str)}
+                    "(edit message)"]])]))
            
   
 

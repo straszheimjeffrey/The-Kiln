@@ -23,7 +23,7 @@
 
 (defclay response-clay
   "The main Ring response."
-  :glaze [(log-glaze :info :show-result? false)]
+  :glaze [(log-glaze :info)]
   
   :value (do
            (info (format "Begin Request: %s"
@@ -56,14 +56,16 @@
                (?? action-to-run!))
              (redirect-after-post (-> redirect-uri ?? str))))
 
-(declare page-header page-footer)
+(declare page-header page-footer stylesheet)
 
 (defclay page-to-show
   "The page"
   :value (html
           [:html
            [:head
-            [:title (-> page-title ?? h)]]
+            [:title (-> page-title ?? h)]
+            [:style {:type "text/css"}
+             (?? stylesheet)]]
            [:body
             (?? page-header)
             [:div#main (?? page-body)]
@@ -85,6 +87,47 @@
             (if (?? logged-on?)
               [:a {:href (-> logoff-uri ?? str)} "(logoff)"]
               [:a {:href (-> logon-uri ?? str)} "(logon)"])]]))
+
+(defclay stylesheet
+  "The CSS text"
+  :value
+  "
+* {margin: 0px;
+   padding: 0px;
+   list-style: none;
+}
+body {margin: 0in .75in;
+      color: #111;
+      font-size: large;
+}
+div {margin: .25in 0in;
+}
+h1 {font-size: 1.3em;
+}
+a, a:visited {color: #225;
+              text-decoration: none;
+              font-size: 0.8em;
+}
+a:hover {color: #448;
+}
+form p {margin: 5px 0px;
+}
+p { margin: 0.25in 0px;
+}
+form input[type=text], form input[type=password], textarea
+ {width: 6in;
+ }
+
+ul {margin: .25in 0in;
+}
+li {margin: 0.1in 0in;
+}
+.header {font-size: 1.1em;
+             color: #222
+}
+.owner {font-size: 0.9em;
+}
+")
 
 (defn- on-error
   [exc kiln]

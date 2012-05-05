@@ -39,10 +39,12 @@
     (when console-also? (println out))))
 
 (defglaze log-glaze
-  :args [log-level & {:keys [show-results?
-                             show-args?
-                             log-to-console?]}]
-  :operation (let [clay-name (:name ?clay)]
+  :args [log-level & options]
+  :operation (let [options (set options)
+                   show-results? (:show-results? options)
+                   show-args? (:show-args? options)
+                   log-to-console? (:log-to-console? options)
+                   clay-name (:name ?clay)]
                (log-helper log-level "Running" clay-name
                            #(pr-str ?args) show-args? log-to-console?)
                (log log-level (format "Running %s" clay-name))
