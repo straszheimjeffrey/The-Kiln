@@ -104,34 +104,42 @@ manageable. It is built around these principles:
 To start with, you must create some "coal". Coals are your base
 values, the ones not computed from other things in the kiln. For a
 webapp, we'll use the request object.
-    
-    (defcoal request "The request object")
+
+````clojure    
+(defcoal request "The request object")
+````
     
 Don't worry that it's blank. We'll assign a value later.
     
 So now we can compute stuff from that.
-    
-    (defclay uri
-      "The URI of the request"
-      :value (build-uri (?? request)))
+
+````clojure    
+(defclay uri
+  "The URI of the request"
+  :value (build-uri (?? request)))
+````
     
 Here we assume you have some function `build-uri` that, when given a request
 object, will from it compute a URI. Also note the `??` syntax. It will automatically
 lookup the request.
     
-    (defclay path
-      "The path"
-      :value (.getPath (?? uri)))
+````clojure
+(defclay path
+  "The path"
+  :value (.getPath (?? uri)))
+````
     
 Dispatching is one of the first things you do in most frameworks. For
 now, we just dispatch on path.
     
-    (defclay dispatch
-      "What do I do?"
-      :value (condp = (?? path)
-               "/remove-user" :remove-user
-               "/add-user" :add-user
-               "/view-user" :view-user))
+````clojure
+(defclay dispatch
+  "What do I do?"
+  :value (condp = (?? path)
+           "/remove-user" :remove-user
+           "/add-user" :add-user
+           "/view-user" :view-user))
+````
     
 Of course, as the application grows, dispatching will get more
 complex. No problem, just make the clay look at more stuff.
@@ -139,38 +147,42 @@ complex. No problem, just make the clay look at more stuff.
 We must match the dispatch to an action. (Ignore the `:glaze` stuff
 for now. We will explain it below.)
     
-    (declare log)
-    (declare security-check)
-    (declare db-con)
-    (declare user)
-    
-    (defclay add-user!
-      :glaze [(log :info)
-              security-check]
-      :value (add-user (?? db-con) (?? user)))
-    
-    (defclay remove-user!
-      :glaze [(log :info)
-              security-check]
-      :value (remove-user (?? db-con) (?? user)))
-    
-    (defclay action!
-      "Dispatch to the action to perform"
-      :glaze [(log :debug)]
-      :value (condp = (?? dispatch)
-               :remove-user (?? remove-user!)
-               :add-user (?? add-user!)
-               :view-user nil ; no changes!
-               ))
-    
+````clojure
+(declare log)
+(declare security-check)
+(declare db-con)
+(declare user)
+
+(defclay add-user!
+  :glaze [(log :info)
+          security-check]
+  :value (add-user (?? db-con) (?? user)))
+
+(defclay remove-user!
+  :glaze [(log :info)
+          security-check]
+  :value (remove-user (?? db-con) (?? user)))
+
+(defclay action!
+  "Dispatch to the action to perform"
+  :glaze [(log :debug)]
+  :value (condp = (?? dispatch)
+           :remove-user (?? remove-user!)
+           :add-user (?? add-user!)
+           :view-user nil ; no changes!
+           ))
+````
+
 Here I'm assuming that the functions `add-user` and `remove-user` are
 already defined somewhere.
     
 Of course we need a database connection.
-    
-    (defclay db-con
-      :value (get-db-con)
-      :cleanup (close-db-con ?self))
+
+````clojure    
+(defclay db-con
+  :value (get-db-con)
+  :cleanup (close-db-con ?self))
+````
 
 As above, I assume `get-db-con` and `close-db-con` are functions
 defined somewhere. Also, note that `?self` is the value computed by
@@ -178,27 +190,31 @@ the clay. You can see it during cleanup.
     
 If you wanted to automatically manage transactioning, try this:
     
-    (defclay transactioned-db
-      :value (get-transactioned-connection)
-      :cleanup-success (do (commit ?self)
-                           (close-db-con ?self))
-      :cleanup-failure (do (rollback ?self)
-                           (close-db-con ?self)))
+````clojure
+(defclay transactioned-db
+  :value (get-transactioned-connection)
+  :cleanup-success (do (commit ?self)
+                       (close-db-con ?self))
+  :cleanup-failure (do (rollback ?self)
+                       (close-db-con ?self)))
+````
     
 I won't detail `user`, but you can figure it out.
     
 Let's look at some glaze.
     
-    (defglaze log
-      "Log an operation"
-      :args [level]
-      :operation (let [clay-name (str (:name ?clay))]
-                   (log level (format "Begin %s" clay-name))
-                   (let [result (?next)]
-                     (log level (format "Complete %s result: %s"
-                                        clay-name
-                                        (str result)))
-                     result)))
+````clojure
+(defglaze log
+  "Log an operation"
+  :args [level]
+  :operation (let [clay-name (str (:name ?clay))]
+               (log level (format "Begin %s" clay-name))
+               (let [result (?next)]
+                 (log level (format "Complete %s result: %s"
+                                    clay-name
+                                    (str result)))
+                 result)))
+````
     
 Here, the `(?next)` call is where the magic happens. It computes and
 returns the value of the enclosed clay. (In reality it may call
@@ -206,14 +222,16 @@ another glaze. They act as a chain.) Notice also that you can access
 the enclosed `?clay`. You can also see its `?args` (not shown).
 
 Here is the `security-check` glaze:
-    
-    (defglaze security-check
-      "Throw if user not valid"
-      :operation (if-not (valid-user? (?? user))
-                   (throw+ {:type :security-breach!
-                            :user (?? user)
-                            :clay ?clay})
-                   (?next)))
+
+````clojure    
+(defglaze security-check
+  "Throw if user not valid"
+  :operation (if-not (valid-user? (?? user))
+               (throw+ {:type :security-breach!
+                        :user (?? user)
+                        :clay ?clay})
+               (?next)))
+````
 
 These run as wrappers around the various clays that include them. This
 allows you to factor out common behavior, much as you would with
@@ -221,28 +239,32 @@ aspects or middleware or the like.
     
 Now we need a view.
     
-    (defclay template
-      :value (condp = (?? dispatch)
-               :remove-user "templates/logon"
-               :add-user "templates/show-user"
-               :view-user "templates/show-user"))
+````clojure
+(defclay template
+  :value (condp = (?? dispatch)
+           :remove-user "templates/logon"
+           :add-user "templates/show-user"
+           :view-user "templates/show-user"))
+````
     
 And so on.
     
 What does the driver look like? This should work:
-    
-    (defn run-kiln
-      [req]
-      (let [kiln (new-kiln)]
-        (stoke-coal kiln request req)
-        (let [result (try
-                       (fire kiln action!) ; do the stuff
-                       (render-template (fire kiln template) ...other kiln data...)
-                       (catch Exception e
-                         (cleanup-kiln-failure kiln)
-                         (throw e)))]
-          (cleanup-kiln-success kiln)
-          result)))
+
+````clojure    
+(defn run-kiln
+  [req]
+  (let [kiln (new-kiln)]
+    (stoke-coal kiln request req)
+    (let [result (try
+                   (fire kiln action!) ; do the stuff
+                   (render-template (fire kiln template) ...other kiln data...)
+                   (catch Exception e
+                     (cleanup-kiln-failure kiln)
+                     (throw e)))]
+      (cleanup-kiln-success kiln)
+      result)))
+````
 
 Here, `(new-kiln)` returns an empty kiln, the `(stoke-coal ...)` sets
 the value of the request (remember we mentioned that above). And the
@@ -254,29 +276,31 @@ various intermediate values that were already computed when we called
 At this point I expect software engineer types will point out that
 some of our clays (namely `dispatch`, `action!`, and `template`) are
 too interdependent.  True. Let's try a minor refactor:
-    
-    (defclay dispatch-structure
-      :value (condp = (?? path)
-               "/remove-user" {:name :remove-user
-                               :action! add-user!
-                               :template "templates/logon"}
-               "/add-user" {:name :add-user
-                            :action! remove-user!
-                            :template "templates/show-user"}
-               "/view-user" {:name :view-user
-                             :action! nil
-                             :templates "templates/show-user"}))
-    
-    (defclay dispatch ; we're redefining this
-      :value (:name (?? dispatch-structure)))
-    
-    (defclay action!
-      :glaze [(log :debug)]
-      :value (when-let [action-clay! (:action! (?? dispatch-structure))]
-               (?? action-clay!)))
-    
-    (defclay template
-      :value (:template (?? dispatch-structure)))
+
+````clojure    
+(defclay dispatch-structure
+  :value (condp = (?? path)
+           "/remove-user" {:name :remove-user
+                           :action! add-user!
+                           :template "templates/logon"}
+           "/add-user" {:name :add-user
+                        :action! remove-user!
+                        :template "templates/show-user"}
+           "/view-user" {:name :view-user
+                         :action! nil
+                         :templates "templates/show-user"}))
+
+(defclay dispatch ; we're redefining this
+  :value (:name (?? dispatch-structure)))
+
+(defclay action!
+  :glaze [(log :debug)]
+  :value (when-let [action-clay! (:action! (?? dispatch-structure))]
+           (?? action-clay!)))
+
+(defclay template
+  :value (:template (?? dispatch-structure)))
+````
     
 Nice, eh?
 
@@ -291,14 +315,18 @@ function, except the memoization is local to the specific kiln.
 
 It looks like this:
 
-    (defclay a-clay-with-arguments
-       :args [a b]
-       :value (+ a b)
-       :cleanup (do-something ?self a b))
+````clojure
+(defclay a-clay-with-arguments
+   :args [a b]
+   :value (+ a b)
+   :cleanup (do-something ?self a b))
+````
 
 You can use it like this:
 
-    (fire some-kiln a-clay-with-arguments 1 2)
+````clojure
+(fire some-kiln a-clay-with-arguments 1 2)
+````
 
 Which will return `3`. Also at cleanup time `(do-something 3 1 2)`
 will be called. Note, this will only happen once. If you call it again
@@ -307,9 +335,11 @@ recomputed. The cleanup is only called once.
 
 On the other hand, if you do this
 
-    (do
-      (fire some-kiln a-clay-with-arguments 1 2)
-      (fire some-kiln a-clay-with-arguments 2 3))
+````clojure
+(do
+  (fire some-kiln a-clay-with-arguments 1 2)
+  (fire some-kiln a-clay-with-arguments 2 3))
+````
 
 the computation will happen twice, as well as the cleanup.
 
@@ -327,13 +357,17 @@ shows how.
 By default, a clay cannot be evaluated with a dosync block. So code
 like this will not work:
 
-    (dosync (fire some-kiln some-clay))
+````clojure
+(dosync (fire some-kiln some-clay))
+````
 
 This also will fail:
 
-    (defclay some-clay
-      :value (let [value (dosync (?? another-clay))]
-                (something value)))
+````clojure
+(defclay some-clay
+  :value (let [value (dosync (?? another-clay))]
+            (something value)))
+````
 
 The reason for this is because the actual firing of the clays, and the
 internal maintainance of the kiln themselves use transactions. If they
@@ -346,9 +380,11 @@ However, there may be times when you simply need a series of clays to
 be transactional. In this case, they can be marked
 `transaction-allowed?`, which will override this behavior.
 
-    (defclay some-transactioned-clay
-      :value (do-something (?? another-clay))
-      :transaction-allowed? true)
+````clojure
+(defclay some-transactioned-clay
+  :value (do-something (?? another-clay))
+  :transaction-allowed? true)
+````
 
 Now `(dosync (fire some-kiln some-transactioned-clay))` will
 work. Note, however, that another-clay must also be thus defined.
