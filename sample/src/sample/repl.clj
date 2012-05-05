@@ -6,7 +6,7 @@
        clojure.tools.logging
        [ring.adapter.jetty :only [run-jetty]]
        [ring.middleware.stacktrace :only [wrap-stacktrace-web]])
-  (require [sample.server :as server])
+  (require [kiln-ring.server :as server])
   (import (org.apache.log4j Logger
                             Level
                             PatternLayout

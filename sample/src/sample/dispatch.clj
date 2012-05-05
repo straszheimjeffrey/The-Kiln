@@ -2,7 +2,7 @@
     ^{:doc "The main dispatcher of the sample server"
       :author "Jeffrey Straszheim"}
   sample.dispatch
-  (use [sample server request]
+  (use [kiln-ring server request]
        kiln.kiln
        ring.util.response
        slingshot.slingshot))
