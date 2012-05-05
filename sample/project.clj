@@ -5,6 +5,7 @@
                  [ring "1.1.0"] ;;
                  ;;[kiln/kiln-ring "1.0.0"]
                  [matchure "0.10.1"]
+                 [hiccup "1.0.0"]
                  [org.clojure/tools.logging "0.2.3"]
                  [log4j "1.2.16" :exlusions [javax.mail/mail
                                              javax.jms/jms
