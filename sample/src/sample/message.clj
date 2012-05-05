@@ -5,6 +5,7 @@
   (use [sample logon-logoff utils]
        kiln.kiln
        kiln-ring.request
+       slingshot.slingshot
        hiccup.core)
   (require [sample.message-database :as md]))
 
@@ -14,6 +15,17 @@
              deref
              ??
              :message-id))
+
+(defclay my-message?
+  :value (let [{:keys [owner]} (md/get-message (?? message-id))
+               current-user (?? current-user-name)]
+           (= owner current-user)))
+
+(defglaze require-my-message
+  :operation (if (?? my-message?)
+               (?next)
+               (throw+ {:type :error-page
+                        :message "Wrong User"})))
 
 (defclay list-messages-body
   :glaze [require-logged-on]
@@ -41,7 +53,14 @@
            [:table
             [:tr [:th.header (h header)]]
             [:tr [:td.owner (h owner)]]
-            [:tr [:td.content (h content)]]]))
+            [:tr [:td.content (h content)]]
+            (when (?? my-message?)
+              [:tr [:td.link [:a {:href (->
+                                         (?? uri-with-path
+                                             (format "/edit-message/%s" key))
+                                         str)}
+                              "(edit message)"]]])]))
+           
   
 
 (defclay new-message-body
@@ -51,11 +70,21 @@
                   :method "post"}
            [:p "Header"]
            [:p [:input {:type "text" :name "header"}]]
+           [:p "Body"]
            [:p [:textarea {:name "body"}]]
            [:p [:input {:type "submit"}]]]))
 
 (defclay edit-message-body
-  )
+  :glaze [require-logged-on
+          require-my-message]
+  :value (let [{:keys [key owner header content]} (md/get-message (?? message-id))]
+           [:form {:method "post"}
+            [:p "Header"]
+            [:p [:input {:type "text" :name "header" :value header}]]
+            [:p "Body"]
+            [:p [:textarea {:name "body"}
+                 (h content)]]
+            [:p [:input {:type "submit"}]]]))
 
 (defclay new-message-action!
   :glaze [require-logged-on]
@@ -67,9 +96,13 @@
   :value (?? list-messages-uri))
 
 (defclay edit-message-action!
-  )
+  :glaze [require-logged-on
+          require-my-message]
+  :value (let [{:keys [body header]} (?? params)
+               current-user-name (?? current-user-name)]
+           (md/edit-message (?? message-id) header body)))
 
 (defclay edit-message-redirect-uri
-  )
+  :value (?? uri-with-path (format "/show-message/%s" (?? message-id))))
 
 ;; End of file
