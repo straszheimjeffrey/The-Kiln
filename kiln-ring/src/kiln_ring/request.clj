@@ -1,8 +1,9 @@
 (ns
     ^{:doc "Coals and Clays to Handle the Request"
       :author "Jeffrey Straszheim"}
-  sample.request
+  kiln-ring.request
   (use kiln.kiln
+       kiln-ring.uri-utils
        slingshot.slingshot)
   (import java.net.URI))
 
@@ -15,7 +16,7 @@
            (map (partial apply str)
                 (partition-by #(= % \/) path))))
 
-(defclay request-as-java-uri
+(defclay request-uri-as-java-uri
   "The request data as a java uri"
   :value (let [{:keys [scheme
                        server-name
@@ -29,6 +30,10 @@
                  uri
                  query-string
                  nil)))
+
+(defclay request-uri
+  "The request as a kiln-ring.uri-utils uri."
+  :value (as-uri (?? request-uri-as-java-uri)))
 
 
 ;; End of file

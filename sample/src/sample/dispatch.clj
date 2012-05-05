@@ -11,7 +11,7 @@
 (defclay response-clay
   :value (do
            (pprint (?? request))
-           (-> path-as-vector ?? pr-str response)))
+           (-> (?? request-uri) str response)))
 
 
 

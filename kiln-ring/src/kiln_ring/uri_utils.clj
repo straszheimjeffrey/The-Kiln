@@ -18,7 +18,7 @@ The methods as-uri and as-java-uri are provided for convinient
 conversion.
 "
       :author "Jeffrey Straszheim"}
-  sample.uri-utils
+  kiln-ring.uri-utils
   (import java.net.URI))
 
 (defprotocol uri-underlying-value

@@ -1,8 +1,8 @@
 (ns
     ^{:doc "A Handler that uses a Kiln to run a Ring."
       :author "Jeffrey Straszheim"}
-  sample.server
-  (use sample.request
+  kiln-ring.server
+  (use kiln-ring.request
        kiln.kiln))
 
 (defn- default-on-error
