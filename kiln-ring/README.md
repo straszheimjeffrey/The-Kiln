@@ -32,6 +32,28 @@ The function `apply-kiln-handler` is defined in `kiln-ring.server`. It
 can take a pair of optional arguments: an `on-error` function and a
 list of Ring middleware wrapping functions.
 
+Next, you just light the `kiln-ring.server/handler` variable up, as
+per normal in Ring. For instance:
+
+````clojure
+(defonce server (run-jetty kiln-ring.server/handler
+	                   {:port 8080 :join? false}))
+````
+
+or else
+
+````clojure
+(ns your-ns
+  (use ...stuff...
+       ring.util.servlet)
+  (:gen-class))
+
+(servlet kiln-rink.server/handler)
+````
+
+In addtion to the `kiln-ring.server` module, two other modules are
+provided:
+
 The module `kiln-ring.request` details the various request clays that
 are provided.
 
