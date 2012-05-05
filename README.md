@@ -119,9 +119,9 @@ So now we can compute stuff from that.
   :value (build-uri (?? request)))
 ````
     
-Here we assume you have some function `build-uri` that, when given a request
-object, will from it compute a URI. Also note the `??` syntax. It will automatically
-lookup the request.
+Here we assume you have some function `build-uri` that, when given a
+request object, will compute a URI. Also note the `??` syntax. It will
+automatically lookup the request.
     
 ````clojure
 (defclay path
