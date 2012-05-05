@@ -5,6 +5,9 @@
 
 ;; This is a very simple in-memory message database.
 
+;; I don't comment this because it is not Kiln related: very basic
+;; Clojure.
+
 (defonce ^{:private true
            :doc "The message store"}
   store
@@ -42,6 +45,7 @@
         attempted-key))))
 
 (defn put-message
+  "Put a new message in the database."
   [user-name header content]
   (dosync
    (let [key (new-key)
@@ -52,10 +56,14 @@
      (update-store new-message))))
 
 (defn get-message
+  "Return a message from the database. It is a map
+with :key, :owner, :header, and :content, all Strings."  
   [key]
   (-> store deref :index (get key)))
 
 (defn edit-message
+  "For the given key, update the message header and content. Does no
+error checking."
   [key new-header new-content]
   (dosync
    (let [current-message (get-message key)
@@ -65,6 +73,9 @@
      (update-store new-message))))
 
 (defn get-message-list
+  "Return all the messages. A seq of map, with keys :key, :owner, and :header. The bodies have been remvoed."
   []
   (for [message (-> store deref :messages)]
     (select-keys message [:key :owner :header])))
+
+;; End of file

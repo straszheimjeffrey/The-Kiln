@@ -12,6 +12,12 @@
                             PatternLayout
                             FileAppender)))
 
+
+;; This is some utility code I use to run Ring/Jetty from within my
+;; REPL. It is useful. Copy it. Steal it from me!
+
+;; It sets up some basic logging in Log4j.
+
 (comment
 
 (restart-server)
