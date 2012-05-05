@@ -35,8 +35,7 @@ be abused). Note the value is the last argument. Any others between
 clay and the last are considered the clay's arguments."
   [kiln clay & args-and-val]
   {:pre [(::kiln? kiln)
-         (::clay? clay)
-         (= (count args-and-val) (+ 1 (count (:args clay))))]}
+         (::clay? clay)]}
   (let [val (last args-and-val)
         args (butlast args-and-val)]
     (dosync
@@ -51,8 +50,7 @@ clay and the last are considered the clay's arguments."
   "Run the clay within the kiln to compute/retrieve its value."
   [kiln clay & args] ; the clay can be a coal
   {:pre [(::kiln? kiln)
-         (or (::clay? clay) (::coal? clay))
-         (= (count args) (count (:args clay)))]}
+         (or (::clay? clay) (::coal? clay))]}
   (when-not (:transaction-allowed? clay)
     (io! "Non-transactional clay evaluated within transaction."))
   (let [key (clay-key clay args)
@@ -71,7 +69,7 @@ clay and the last are considered the clay's arguments."
            ;; compute and store result
            (let [result (try
                           (dosync (alter (:vals kiln) assoc key ::running))
-                          (apply (:fun clay) kiln clay args)
+                          ((:fun clay) kiln clay args)
                           (catch Throwable e
                             (dosync (alter (:vals kiln) assoc key nil))
                             (throw e)))]
@@ -155,6 +153,17 @@ clay and the last are considered the clay's arguments."
      ~(vec (list* kiln-sym other-args))
      ~(wrap-fires kiln-sym form)))
 
+(defn- all-symbols
+  "Walks into a binding form and find everything that might be a var"
+  [form]
+  (cond
+   (= form '&) nil
+   (symbol? form) #{form}
+   (vector? form) (reduce union (map all-symbols form))
+   (map? form) (reduce union (concat (map all-symbols (vals form))
+                                     (map all-symbols (keys form))))
+   :otherwise nil))
+
 (defn- wrap-glazes
   [glazes value kiln-sym args]
   (let [clay-sym (gensym "clay")
@@ -167,11 +176,7 @@ clay and the last are considered the clay's arguments."
                  (seq glaze-reference) [(first glaze-reference)
                                         (rest glaze-reference)])]
             `((:operation ~glaze-symb)
-              ~kiln-sym
-              ~clay-sym
-              ~next-sym
-              ~args-sym
-              ~@glaze-args)))
+              ~kiln-sym ~clay-sym ~next-sym ~args-sym ~@glaze-args)))
         combine
         (fn [inner-form glaze-form]
           (let [next-sym (gensym "next")]
@@ -181,13 +186,27 @@ clay and the last are considered the clay's arguments."
         (fn [form]
           (if (empty? glazes)
             form
-            `(let [~args-sym (apply hash-map (interleave '~args
-                                                         (list ~@args)))]
-               ~form)))]
+            (let [arg-symbs (-> args all-symbols seq)]
+              `(let [~args-sym (apply hash-map (interleave '[~@arg-symbs]
+                                                           [~@arg-symbs] ))]
+                 ~form))))
+        wrap-with-args-binding
+        (fn [form]
+          `(let [~args ~args-sym]
+             ~form))]
     (->
      (reduce combine value glazes)
      wrap-if-glazes-present
-     (build-env-fun kiln-sym (list* clay-sym args)))))
+     wrap-with-args-binding
+     (build-env-fun kiln-sym (list clay-sym args-sym)))))
+
+(defglaze g
+  :operation (prn ?args))
+
+(defclay c
+  :value :b
+  :args [a b]
+  :glaze [g])
   
 (def ^:private allowed-clay-kws #{:id :name :value
                                   :kiln :glaze :args :transaction-allowed?
