@@ -42,7 +42,7 @@
 ;; The business logic
 
 ;; Here we just make sure the name and password match: a very silly
-;; way to logon. We use the resulting map below.
+;; way to logon. The result is a map, which is used below.
 (defclay logon-action!
   :value (let [{:keys [name pass]} (?? params)]
            {:success? (and name
@@ -61,7 +61,7 @@
               :admin? (:admin? logon-stuff)}
              (?? logoff-new-session))))
 
-;; As above, where we redirect to is determined by your logon.
+;; As with the session, where we redirect is determined by your logon.
 (defclay logon-redirect-uri
   :value (let [logon-stuff (?? logon-action!)]
            (if (:success? logon-stuff)
@@ -69,7 +69,7 @@
              (?? failed-logon-uri))))
 
 
-;; Here is the page we show you:
+;; Here is the logon form:
 
 ;; Some HTML.
 (defn- logon-body-text

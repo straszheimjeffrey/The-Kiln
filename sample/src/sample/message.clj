@@ -116,7 +116,7 @@ messages."
                  (h content)]]
             [:p [:input {:type "submit"}]]]))
 
-;; These next to post a new message and redirect.
+;; These next two post a new message and redirect.
 (defclay new-message-action!
   :glaze [require-logged-on]
   :value (let [{:keys [body header]} (?? params)

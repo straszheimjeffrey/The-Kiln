@@ -96,7 +96,7 @@ components, such as:
 
 ;; We're going to use the Matchure library to actually select and bind
 ;; the request data. Since the Matcure syntax is (shall we say)
-;; verbose, I have build a convinience macro to make the dispatcher
+;; verbose, I have built a convinience macro to make the dispatcher
 ;; easier to follow. Like most macros, it is tricky (look what I did
 ;; with the ~'??), but I believe the actual dispatch code is easy to
 ;; read.
