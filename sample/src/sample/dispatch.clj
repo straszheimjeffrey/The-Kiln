@@ -15,24 +15,32 @@
 
 ;; The thing to notice in this code is this: it does not evaluate any
 ;; business logic clay. It will use requst oriented clays, such as the
-;; URI. But clays that actually do the application work are not
-;; called. The reason for this is simple: we have to calculate the
-;; dispatch *before* we can compute the business logic.
+;; request-method or the uri. But clays that actually do the
+;; application work are not called. The reason for this is simple: we
+;; have to calculate the dispatch data *before* we can compute the
+;; business logic, since they depend on it.
 
+
+;; I define main-dispatch later. For now, know that it returns a map
+;; that contains data and clays.
 (declare main-dispatch)
 
-;; First are some basic dispatch clays. You saw how some of these get
-;; used in sample.response.
+
+;; First are some basic data clays. You saw how some of these get used
+;; in sample.response. Notice how they all get their data from the
+;; main-dispatch map.
 
 (defclay response-type
   "How to respond. :page, :redirect, or :not-found."
   :value (-> main-dispatch ?? :response-type))
 
+;; Redirect-uri, when called, runs its clay.
 (defclay redirect-uri
   "If this is a redirect, where should we go? Returns a
 kiln-ring.uri-utils.uri."
   :value (-> main-dispatch ?? :redirect-uri ??))
 
+;; Action! does not run its clay!
 (defclay action!
   "The action to perform. A clay."
   :value (-> main-dispatch ?? :action))
@@ -46,9 +54,11 @@ kiln-ring.uri-utils.uri."
   "The title to show."
   :value (-> main-dispatch ?? :title))
 
+;; Like action!, this returns an unevaluated clay.
 (defclay page-body
-  "The main body of the page"
+  "The main body of the page, a clay."
   :value (-> main-dispatch ?? :body ??))
+
 
 ;; Next, we are going to crack apart the request and make a nice
 ;; object to dispatch on. What we want is to turn a request like this:
@@ -59,10 +69,10 @@ kiln-ring.uri-utils.uri."
 
 ;; [:get "fred" "mary" "sue"]
 
-;; Obviously that will be :post if needed.
+;; Obviously that will be :post if the request was a post.
 
 (defclay path-as-seq
-  "The path of the request split on /'s, to form a vec"
+  "The path of the request split on /'s, to form a seq."
   :value (let [path (:uri (?? request))]
            (->> (partition-by #(= % \/) path)
                 (map (partial apply str))
@@ -124,12 +134,12 @@ components, such as:
                          list-messages-uri
                          logon-uri)})
 
-;; Stop and notice something! Look at the :redirect-uri field
-;; above. That result (which is either list-messages-uri or logon-uri)
-;; is a clay. But we do not evaluate it now. If we tried, it would go
-;; into a loop, since they each need the output of the dispatcher. But
-;; we *are* the dispatcher. For now return the clays and let someone
-;; else evaluate them.
+;; Stop and notice something! Look at the :redirect-uri field in
+;; main-matches. That result (which is either list-messages-uri or
+;; logon-uri) is a clay. But we do not evaluate it now. If we tried,
+;; it would go into a loop, since they each need the output of the
+;; dispatcher. But we *are* the dispatcher. For now, we return the
+;; clays and let someone else evaluate them.
 
 
 ;; Logon and logoff. These have action and body clays. Like the URI

@@ -16,7 +16,6 @@
 
 ;; Some clays about the current message.
 
-
 ;; This clay gets the current message id from the current
 ;; request. Actually, we get it from the dispatcher, as we took it out
 ;; using Matchure. This requires we break a circularity between
@@ -48,6 +47,7 @@ messages."
                (?next)
                (throw+ {:type :error-page
                         :message "Wrong User"})))
+
 
 
 ;; Here are the working clays:

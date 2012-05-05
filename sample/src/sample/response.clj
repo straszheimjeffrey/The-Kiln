@@ -22,8 +22,8 @@
 ;; make it very easy to follow and understand. I hope that I
 ;; succeed. Let's Go!
 
-;; First, as you go on you'll see a lot of declare statements like
-;; this one. Just ignore them for now.
+;; First, you'll see a lot of declare statements like this one. Just
+;; ignore them for now.
 (declare redirect-response page-to-show)
 
 
@@ -35,7 +35,8 @@
   
   :value (do
 
-           ;; This is the start, so let's log something.
+           ;; This is the start, so let's log something. (Note how I
+           ;; use the -> with the ??. Arrows rule!)
            (info (format "Begin Request: %s"
                          (-> request-uri ?? str)))
            
@@ -43,9 +44,10 @@
             
             ;; Our application has three basic types of responses: we
             ;; can show a page, we can do some action followed by a
-            ;; redirect, or we can show a "Not Found" page. Which we
-            ;; will do is found in the response-type clay. Depending
-            ;; on which, we get the result from a different clay.
+            ;; redirect, or we can show a "Not Found" page. We
+            ;; determine which by inspecting the response-type
+            ;; clay. Depending on which we have, we get the result
+            ;; from a different clay.
             (let [response (condp = (?? response-type)
                              :page (response (?? page-to-show))
                              :redirect (?? redirect-response)
@@ -69,8 +71,9 @@
 
 ;; For a redirect-response, we check the action! clay, which will
 ;; return nil or another clay. If we find a clay, we evaluate it. Then
-;; we redirect to whatever is in redirect-uri. Notice how I use the
-;; clojure -> operator to call a clay. I do that a lot. Arrows rule!
+;; we redirect to whatever is in redirect-uri. Notice again how I use
+;; the clojure -> operator to call a clay. I do that a lot. Arrows
+;; rule!
 (defclay redirect-response
   :value (do (when-let [action-to-run! (?? action!)]
                (?? action-to-run!))
@@ -101,9 +104,10 @@
            [:h1 (-> page-title ?? h)]]))
 
 
-;; The footer is a bit more complex. It adds links. The URI's, by the
-;; way, are defined in the module sample.utils. I like to keep them in
-;; one place. Also notice that we ask if the user is logged-on?
+;; The footer is a bit more complex. It adds links. The application
+;; uri's, by the way, are defined in the module sample.utils. I like
+;; to keep them in one place. Also notice that we ask if the user is
+;; logged-on?, which is defined in the sample.logon-logoff module.
 (defclay page-footer
   "The page footer"
   :value (html
@@ -162,6 +166,9 @@ li {margin: 0.2in 0in;
 .owner {font-size: 0.9em;
 }
 ")
+
+;; That's it for this. The stuff below is Ring plumbing.
+
 
 
 ;; Below are the functions to interface with the Kiln-Clay
