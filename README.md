@@ -352,13 +352,6 @@ be transactional. In this case, they can be marked
 
 Now `(dosync (fire some-kiln some-transactioned-clay))` will
 work. Note, however, that another-clay must also be thus defined.
-    
-    
-## TODO
-
-* Better sensing transactional status
-* Dynamic Glaze.
-* Cleanup for Glaze.
 
 ## License
 
