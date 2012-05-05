@@ -1,7 +1,7 @@
 (ns
     ^{:doc "A module to manage logon and logoff"
       :author "Jeffrey Straszheim"}
-  logon-logoff
+  sample.logon-logoff
   (use kiln-ring.request
        kiln.kiln
        slingshot.slingshot
@@ -12,16 +12,17 @@
 
 (defclay logon-action!
   :value (let [{:keys [name pass]} (?? params)]
+           (prn name pass)
            {:success? (= name pass)
             :admin? (= name "admin")
             :name name}))
 
 (declare logoff-new-session)
-(defclay login-new-session
+(defclay logon-new-session
   :value (let [logon-stuff (?? logon-action!)]
            (if (:success? logon-stuff)
              {:user {:name (:name logon-stuff)}
-              :admin? (:admin logon-stuff)}
+              :admin? (:admin? logon-stuff)}
              (?? logoff-new-session))))
 
 (defclay logon-redirect-uri
@@ -45,7 +46,8 @@
                         :name "name"}]]
            [:p "Password"]
            [:p [:input {:type "password"
-                        :name "password"}]]]))
+                        :name "pass"}]]
+           [:p [:input {:type "submit"}]]]))
 
 (defclay logoff-action!
   :value :none)
