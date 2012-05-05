@@ -11,4 +11,5 @@
                                              javax.jms/jms
                                              com.sun.jdmk/jmxtools
                                              com.sun.jmx/jmxri]]]
-  :dev-dependencies [[swank-clojure "1.3.3"]])
+  :dev-dependencies [[swank-clojure "1.3.3"]]
+  :aot [#".*"])

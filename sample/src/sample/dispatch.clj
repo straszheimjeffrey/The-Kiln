@@ -5,7 +5,9 @@
   (use [kiln-ring server request]
        kiln.kiln
        ring.util.response
-       slingshot.slingshot))
+       ring.util.servlet
+       slingshot.slingshot)
+  (:gen-class))
 
 (use 'clojure.pprint)
 (defclay response-clay
@@ -13,9 +15,8 @@
            (pprint (?? request))
            (-> (?? request-uri) str response)))
 
-
-
 (apply-kiln-handler response-clay)
 
+(servlet handler)
 
 ;; End of file
