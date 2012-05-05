@@ -2,10 +2,11 @@
 # sample
 
 This is a small web application that demonstrates the basic use of the
-Kiln in a RESTful environment. It is an utterly primitive message
-board. To logon, enter any name and matching password; e.g., "fred"
-"fred" will log you in as fred, "mary" "mary" as mary. Trying "fred"
-with a password of "bob" will fail. Guess what "admin" "admin" does?
+Kiln in a RESTful environment. When run, it displays an utterly
+primitive message board. To logon, enter any name and matching
+password; e.g., "fred" "fred" will log you in as fred, "mary" "mary"
+as mary. Trying "fred" with a password of "bob" will fail. Guess what
+"admin" "admin" does?
 
 Once logged in, the application allows you to post messages. Then you
 read messages other have posted. You can edit your own messages. The
@@ -21,19 +22,20 @@ saying, "I am here. I have this data. What must I do?" you should say,
 "I need these values to build my result. I will list them and figure
 them out later."
 
-In your application, high level concept and artifacts should each have
-a unique top-level clay. So there should be a `current-user` clay and
-a `current-page-id` clay. Clays are not functions that compute a
-result from arguments. (They can be, but that is bad Kiln design.)
-They are *values*, and they know how to compute themselves.
+In your application, the various high-level concepts and artifacts
+should each have a unique top-level clay. So there should be a
+`current-user` clay and a `current-page-id` clay. The point is this:
+clays are not functions that compute a result from arguments. (They
+can be, but that is bad Kiln design.)  They are *values*, and they
+know how to compute themselves.
 
 The trickiest part of this code, in my opinion, is to understand the
 dispatcher: it works backward! In a normal dispatcher, you break apart
-the request and then call the business logic code. In a Kiln
-dispatcher, you break apart the request, but only to provide data
-which will be used elsehwere. The dispatcher returns clays that will
-do the work. But they will use other clays that depend on the
-dispatcher result.
+the request, get the data from it, and then call the business logic
+code with that data. In a Kiln dispatcher, you break apart the
+request, but only to provide data which will be used elsehwere. The
+dispatcher returns clays that will do the work, but it does not
+evaluate them.
 
 In short, the dispatcher calls no code. It *chooses* the code, and
 sets up the environment where that code will run.
@@ -51,9 +53,9 @@ straszheimjeffrey@gmail.com
 
 ## Usage
 
-Checkout this code from git. It can be run directly from the command
-line if you have lein ring installed. Or else, you can evaluate the
-sample.repl module and run `(start-server)` from there.
+Checkout this code from Github. It can be run directly from the
+command line if you have lein ring installed. Or else you can evaluate
+the sample.repl module and run `(start-server)` from there.
 
 ## License
 
