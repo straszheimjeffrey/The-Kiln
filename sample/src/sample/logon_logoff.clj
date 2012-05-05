@@ -2,13 +2,23 @@
     ^{:doc "A module to manage logon and logoff"
       :author "Jeffrey Straszheim"}
   sample.logon-logoff
-  (use kiln-ring.request
+  (use sample.utils
+   kiln-ring.request
        kiln.kiln
        slingshot.slingshot
        hiccup.core))
 
 ;; A very stupid and simple logon mechanism. A real app would do real
 ;; things.
+
+(defclay logged-on?
+  :value (-> session ?? :user))
+
+(defclay current-user-name
+  :value (?? logged-on?))
+
+(defclay admin-user?
+  :value (-> session ?? :admin?))
 
 (defclay logon-action!
   :value (let [{:keys [name pass]} (?? params)]
@@ -28,12 +38,8 @@
 (defclay logon-redirect-uri
   :value (let [logon-stuff (?? logon-action!)]
            (if (:success? logon-stuff)
-             (-> (?? request-uri)
-                 (assoc :path "/"
-                        :query nil))
-             (-> (?? request-uri)
-                 (assoc :path "/error/failed-logon"
-                        :query nil)))))
+             (?? list-messages-uri)
+             (?? error-uri "failed-logon"))))
 
 (defclay logon-body
   :value (html
@@ -56,8 +62,6 @@
   :value (dissoc (?? session) :user :admin?))
 
 (defclay logoff-redirect-uri
-  :value (-> (?? request-uri)
-             (assoc :path "/"
-                    :query nil)))
+  :value (?? logoff-uri))
 
 ;; End of file

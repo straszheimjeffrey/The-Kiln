@@ -2,51 +2,19 @@
     ^{:doc "The main dispatcher of the sample server"
       :author "Jeffrey Straszheim"}
   sample.dispatch
-  (use [sample logon-logoff]
-       [kiln-ring server request]
+  (use [sample logon-logoff message utils]
+       [kiln-ring request]
        kiln.kiln
-       ring.util.response
-       ring.util.servlet
-       ring.middleware.params
-       ring.middleware.keyword-params
-       ring.middleware.session
        slingshot.slingshot
-       hiccup.core
        matchure
-       clojure.tools.logging)
-  (:gen-class))
+       clojure.tools.logging))
 
-;; Welcome.
 
 ;; This is the main dispatch logic for a Kiln-Ring Restful Web
-;; Server. In this code, I write from top to bottom to make it easy to
-;; follow. Ignore the declare statements. They will be defined below.
-
-;; To start, we need a main response clay.
-
-(use 'clojure.pprint)
-(declare action! redirect-uri page-to-show response-type new-session log-glaze)
-(defclay response-clay
-  "The main Ring response."
-  :value (do
-           ;; The response is either a page or an action followed by a
-           ;; redirect.
-           (pprint request)
-           (info (format "Begin Request: %s"
-                         (-> request-uri ?? str)))
-           (let [response
-                 (condp = (?? response-type)
-                     :redirect (do (when-let [action-to-run! (?? action!)]
-                                     (?? action-to-run!)
-                                     (redirect-after-post (-> redirect-uri ?? str))))
-                     :page (response (?? page-to-show))
-                     :not-found (not-found "Page not found"))]
-             (if-let [new-session (?? new-session)]
-               (assoc response :session new-session)
-               response)))
-  :glaze [(log-glaze :info)])
+;; Server.
 
 (declare main-dispatch)
+
 (defclay response-type
   "How to respond"
   :value (-> main-dispatch ?? :response-type))
@@ -72,61 +40,84 @@
   "The main body of the page"
   :value (-> main-dispatch ?? :body ??))
 
-(declare path-as-seq error-body)
+
+(declare path-as-seq
+         main-matches
+         logon-matches
+         message-matches)
+
+(defclay dispatch-request-method-and-path
+  "A seq with the request request method followed by the path
+components, such as:
+
+  '(:get \"message\" \"54\")"
+  :value (cons (?? request-method)
+               (?? path-as-seq)))
+
 (defclay main-dispatch
   "The main uri dispatch"
-  :value
-  (let [path (cons (?? request-method)
-                   (?? path-as-seq))]
-    (cond-match
-     [[:post "logon"] path] {:response-type :redirect
-                             :action logon-action!
-                             :new-session logon-new-session
-                             :redirect-uri logon-redirect-uri}
-     [[:get "logon"] path] {:response-type :page
-                            :title "Login"
-                            :body logon-body}
-     [[:post "logoff"] path] {:response-type :redirect
-                              :action logoff-action!
-                              :new-session logoff-new-session
-                              :redirect-uri logoff-redirect-uri}
-     [_ path] {:response-type :not-found})))
+  :value (or (?? main-matches)
+             (?? logon-matches)
+             (?? message-matches)
+             {:response-type :not-found}))
 
+(defmacro dispatch-clay
+  [name & forms]
+  (let [form-pairs (partition 2 forms)]
+    `(defclay ~name
+       :value
+       (cond-match
+        ~@(->>
+           (for [[pattern result] form-pairs]
+             `([~pattern (~'?? dispatch-request-method-and-path)] ~result))
+           (apply concat))))))
 
-(declare page-header page-footer)
-(defclay page-to-show
-  "The page"
-  :value (html
-          [:html
-           [:head
-            [:title (-> page-title ?? h)]]
-           [:body
-            (?? page-header)
-            [:div#main (?? page-body)]
-            (?? page-footer)]]))
+(dispatch-clay
+ main-matches
+ [:get "/"] {:response-type :redirect
+             :action nil
+             :redirect-uri (if (?? logged-on?)
+                             list-messages-uri
+                             logon-uri)})
 
-(defclay page-header
-  "The page header"
-  :value (html
-          [:div#header
-           [:h1 (-> page-title ?? h)]]))
+(dispatch-clay
+ logon-matches
+ [:post "logon"] {:response-type :redirect
+                  :action logon-action!
+                  :new-session logon-new-session
+                  :redirect-uri logon-redirect-uri}
+ [:get "logon"] {:response-type :page
+                 :title "Login"
+                 :body logon-body}
+ [:post "logoff"] {:response-type :redirect
+                   :action logoff-action!
+                   :new-session logoff-new-session
+                   :redirect-uri logoff-redirect-uri})
 
-(declare main-uri)
-(defclay page-footer
-  "The page footer"
-  :value (html
-          [:div#footer
-           [:p
-            [:a {:href (-> main-uri ?? str)} "(home)"]
-            ;; logon/logoff
-            ]]))
+(dispatch-clay
+  message-matches
+  [:get "list-messages"] {:response-type :page
+                          :title "Messages"
+                          :body list-messages-body}
+  [:get "show-message" ?which] {:response-type :page
+                                :title "Message"
+                                :body show-message-body
+                                :message-id which}
+  [:get "new-message"] {:response-type :page
+                        :title "New Message"
+                        :body new-message-body}
+  [:get "edit-message" ?which] {:response-type :page
+                                :title "Edit Message"
+                                :body edit-message-body
+                                :message-id which}
+  [:post "new-message"] {:response-type :redirect
+                         :action new-message-action!
+                         :redirect-uri new-message-redirect-uri}
+  [:post "edit-message" ?which] {:response-type :redirect
+                                 :action edit-message-action!
+                                 :redirect-uri edit-message-redirect-uri
+                                 :message-id which})
 
-(defclay main-uri
-  "The main page uri"
-  :value (-> (?? request-uri)
-             (assoc :path "/"
-                    :query nil)))
-  
 (defclay path-as-seq
   "The path of the request split on /'s, to form a vec"
   :value (let [path (:uri (?? request))]
@@ -134,34 +125,5 @@
                 (map (partial apply str))
                 (remove #{"/"}))))
 
-(defglaze log-glaze
-  :args [log-level]
-  :operation (let [clay-name (:name ?clay)]
-               (log log-level (format "Running %s" clay-name))
-               (let [result (?next)]
-                 (log log-level (format "Completed %s: %s"
-                                        clay-name
-                                        (pr-str result)))
-                 result)))
-                
-(defn- on-error
-  [exc kiln]
-  (error exc "Exception in Kiln")
-  (if (instance? Exception kiln)
-    ;; Handle java.lang.Exception gracefully
-    (do (cleanup-kiln-failure)
-        (-> (response "An error occurred")
-            (status 500)))
-    ;; Go boom for a Throwable
-    (throw exc)))
-    
-             
-(apply-kiln-handler response-clay
-                    :on-error on-error
-                    :middleware [wrap-keyword-params
-                                 wrap-params
-                                 wrap-session])
-
-(servlet handler)
 
 ;; End of file
