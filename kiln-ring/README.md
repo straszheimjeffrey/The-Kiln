@@ -17,14 +17,16 @@ The principle of this is simple:
 
 Your code can be as simple as this:
 
-    (use kiln.kiln
-         [kiln-ring server response]
-         ring.util.response)
+````clojure
+(use kiln.kiln
+     [kiln-ring server response]
+     ring.util.response)
 
-    (defclay response-clay
-      :value (response (str (?? request-uri))))
+(defclay response-clay
+  :value (response (str (?? request-uri))))
 
-    (apply-kiln-handler response-clay)
+(apply-kiln-handler response-clay)
+````
 
 The function `apply-kiln-handler` is defined in `kiln-ring.server`. It
 can take a pair of optional arguments: an `on-error` function and a
