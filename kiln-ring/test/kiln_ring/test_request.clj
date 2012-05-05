@@ -6,6 +6,9 @@
 (def sample-request
   {:ssl-client-cert nil,
    :remote-addr "127.0.0.1",
+   :params {:a "fred" :b "mary"}
+   :session {:name "bob"}
+   :cookies {"blah" {:value "bleh"}}
    :scheme :http,
    :request-method :get,
    :query-string "bob=phil",
@@ -30,10 +33,14 @@
 (deftest test-request
   (let [k (new-kiln)]
     (stoke-coal k request sample-request)
-    (is (= (fire k path-as-vector)
-           ["/" "fred" "/" "mary" "/" "a"]))
     (is (= (fire k request-uri)
-           (as-uri "http://localhost:4448/fred/mary/a?bob=phil")))))
+           (as-uri "http://localhost:4448/fred/mary/a?bob=phil")))
+    (is (= (fire k params)
+           {:a "fred" :b "mary"}))
+    (is (= (fire k cookies)
+           {"blah" {:value "bleh"}}))
+    (is (= (fire k session)
+           {:name "bob"}))))
 
 (comment
 
