@@ -25,7 +25,7 @@
 )
 
 (defonce appender
-  (FileAppender. (PatternLayout. "%d %-5p [%t] %F - %m%n")
+  (FileAppender. (PatternLayout. "%d %-5p [%t] - %m%n")
                  "output.out"))
 
 (defn- add-logging

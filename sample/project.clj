@@ -12,6 +12,7 @@
                                              com.sun.jdmk/jmxtools
                                              com.sun.jmx/jmxri]]]
   :dev-dependencies [[swank-clojure "1.3.3"]]
-  :aot [#".*"])
+  :aot [#".*"]
+  :ring {:handler sample.response/my-handler})
 
 ;; End of file

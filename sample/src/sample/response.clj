@@ -188,7 +188,8 @@ li {margin: 0.2in 0in;
                                  wrap-params
                                  wrap-session])
 
-(servlet handler)
+(def my-handler handler)
+(servlet my-handler)
 
 
 

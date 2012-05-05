@@ -51,7 +51,8 @@ straszheimjeffrey@gmail.com
 
 ## Usage
 
-
+Checkout this code from git. It can be run directly from the command
+line if you have lein ring installed.
 
 ## License
 
