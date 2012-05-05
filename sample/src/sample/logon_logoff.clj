@@ -12,7 +12,7 @@
 ;; things.
 
 
-;; These are utils useful elsewhere
+;; Here we have some basic clays about the current user.
 
 (defclay logged-on?
   :value (-> session ?? :user))
@@ -22,6 +22,9 @@
 
 (defclay admin-user?
   :value (-> session ?? :admin?))
+
+
+;; These are some glazes you can add to a clay to provide security.
 
 (defglaze require-logged-on
   :operation (if (?? logged-on?)
@@ -38,6 +41,8 @@
 
 ;; The business logic
 
+;; Here we just make sure the name and password match: a very silly
+;; way to logon. We use the resulting map below.
 (defclay logon-action!
   :value (let [{:keys [name pass]} (?? params)]
            {:success? (and name
@@ -46,6 +51,8 @@
             :admin? (= name "admin")
             :name name}))
 
+;; When we logon, we need to update the user's session. If logon
+;; failed, we clear any user data.
 (declare logoff-new-session)
 (defclay logon-new-session
   :value (let [logon-stuff (?? logon-action!)]
@@ -54,12 +61,17 @@
               :admin? (:admin? logon-stuff)}
              (?? logoff-new-session))))
 
+;; As above, where we redirect to is determined by your logon.
 (defclay logon-redirect-uri
   :value (let [logon-stuff (?? logon-action!)]
            (if (:success? logon-stuff)
              (?? list-messages-uri)
              (?? failed-logon-uri))))
 
+
+;; Here is the page we show you:
+
+;; Some HTML.
 (defn- logon-body-text
   [uri error-message]
   (html
@@ -74,12 +86,17 @@
                  :name "pass"}]]
     [:p [:input {:type "submit"}]]]))
 
+;; Return the basic logon form.
 (defclay logon-body
   :value (logon-body-text (?? logon-uri) nil))
 
+;; Same, but with an error message.
 (defclay failed-logon-body
   :value (logon-body-text (?? logon-uri)
                           "Sorry, we do not recognize that name and password"))
+
+
+;; The logoff stuff is pretty obvious.
 
 (defclay logoff-action!
   :value :none)

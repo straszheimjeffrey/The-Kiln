@@ -152,7 +152,11 @@ components, such as:
                    :new-session logoff-new-session
                    :redirect-uri logoff-redirect-uri})
 
-;; These return the clays form the sample.message module.
+;; These return the clays form the sample.message module. Notice how
+;; we use the ?which syntax from matchure to get the message ID. Also,
+;; notice how that data is included in the resulting maps, as
+;; :message-id. You'll see how that gets used in the sample.message
+;; module.
 (dispatch-clay
   message-matches
   [:get "list-messages"] {:response-type :page

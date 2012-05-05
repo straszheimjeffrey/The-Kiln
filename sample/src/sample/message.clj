@@ -10,6 +10,17 @@
   (require [sample.message-database :as md]))
 
 
+;; This is the web applications message interface. It uses the
+;; sample.message-database module to do the actual work.
+
+
+;; Some clays about the current message.
+
+
+;; This clay gets the current message id from the current
+;; request. Actually, we get it from the dispatcher, as we took it out
+;; using Matchure. This requires we break a circularity between
+;; modules, which is ugly, but that's life.
 (defclay message-id
   :value (-> (ns-resolve *ns* 'sample.dispatch/main-dispatch) ; circular includes
              deref
@@ -23,16 +34,26 @@
   :value (:owner (?? current-message)))
 
 (defclay my-message?
+  "Does the current user own this message. Note that admin owns *all*
+messages."
   :value (or (?? admin-user?)
              (= (?? current-message-owner)
                 (?? current-user-name))))
 
+
+;; A glaze to require the current message belongs to the current
+;; user. Or admin.
 (defglaze require-my-message
   :operation (if (?? my-message?)
                (?next)
                (throw+ {:type :error-page
                         :message "Wrong User"})))
 
+
+;; Here are the working clays:
+
+
+;; The HTML for the main message list.
 (defclay list-messages-body
   :glaze [require-logged-on]
   :value (let [ml (md/get-message-list)]
@@ -54,6 +75,7 @@
             [:p [:a {:href (str (?? uri-with-path "/new-message"))}
                  "(new message)"]])))
 
+;; The HTML to show the current message.
 (defclay show-message-body
   :glaze [require-logged-on]
   :value (let [{:keys [key owner header content]} (?? current-message)]
@@ -68,6 +90,7 @@
                                str)}
                     "(edit message)"]])]))
 
+;; A form for adding a new message.
 (defclay new-message-body
   :glaze [require-logged-on]
   :value (html
@@ -79,6 +102,8 @@
            [:p [:textarea {:name "body"}]]
            [:p [:input {:type "submit"}]]]))
 
+;; A form to edit the current message. Notice we have added the
+;; require-my-message clay. You can only edit your own.
 (defclay edit-message-body
   :glaze [require-logged-on
           require-my-message]
@@ -91,6 +116,7 @@
                  (h content)]]
             [:p [:input {:type "submit"}]]]))
 
+;; These next to post a new message and redirect.
 (defclay new-message-action!
   :glaze [require-logged-on]
   :value (let [{:keys [body header]} (?? params)
@@ -100,6 +126,8 @@
 (defclay new-message-redirect-uri
   :value (?? list-messages-uri))
 
+;; These two edit the current message and redirect. Again note the
+;; require-my-message glaze.
 (defclay edit-message-action!
   :glaze [require-logged-on
           require-my-message]
