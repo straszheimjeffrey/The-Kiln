@@ -11,6 +11,9 @@
 ;; A very stupid and simple logon mechanism. A real app would do real
 ;; things.
 
+
+;; These are utils useful elsewhere
+
 (defclay logged-on?
   :value (-> session ?? :user))
 
@@ -20,9 +23,23 @@
 (defclay admin-user?
   :value (-> session ?? :admin?))
 
+(defglaze require-logged-on
+  :operation (if (?? logged-on?)
+               (?next)
+               (throw+ {:type :forced-redirect
+                        :uri (?? logon-uri)})))
+
+(defglaze require-admin
+  :operation (if (?? admin-user?)
+               (?next)
+               (throw+ {:type :error-page
+                        :message "not allowed"})))
+
+
+;; The business logic
+
 (defclay logon-action!
   :value (let [{:keys [name pass]} (?? params)]
-           (prn name pass)
            {:success? (= name pass)
             :admin? (= name "admin")
             :name name}))
@@ -62,6 +79,6 @@
   :value (dissoc (?? session) :user :admin?))
 
 (defclay logoff-redirect-uri
-  :value (?? logoff-uri))
+  :value (?? logon-uri))
 
 ;; End of file

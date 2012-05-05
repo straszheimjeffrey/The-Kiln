@@ -2,9 +2,9 @@
     ^{:doc "Generates a response for the sample server"
       :author "Jeffrey Straszheim"}
   sample.response
-  (use [sample dispatch utils]
+  (use [sample dispatch logon-logoff utils]
        [kiln-ring server request]
-       kiln-kiln
+       kiln.kiln
        ring.util.response
        ring.util.servlet
        ring.middleware.params
@@ -15,32 +15,41 @@
        clojure.tools.logging)
   (:gen-class))
 
-;; Welcome.
+;; Welcome!
 
 ;; To start, we need a main response clay.
 
 (use 'clojure.pprint)
-(declare log-glaze)
+(declare redirect-response page-to-show log-glaze)
 
 (defclay response-clay
   "The main Ring response."
   :value (do
            ;; The response is either a page or an action followed by a
            ;; redirect.
-           (pprint request)
+           (pprint (?? request))
            (info (format "Begin Request: %s"
                          (-> request-uri ?? str)))
-           (let [response
-                 (condp = (?? response-type)
-                     :redirect (do (when-let [action-to-run! (?? action!)]
-                                     (?? action-to-run!))
-                                   (redirect-after-post (-> redirect-uri ?? str)))
-                     :page (response (?? page-to-show))
-                     :not-found (not-found "Page not found"))]
-             (if-let [new-session (?? new-session)]
-               (assoc response :session new-session)
-               response)))
+           (try+
+             (let [response (condp = (?? response-type)
+                              :redirect (?? redirect-response)
+                              :page (response (?? page-to-show))
+                              :not-found (not-found "Page not found"))]
+               (if-let [new-session (?? new-session)]
+                 (assoc response :session new-session)
+                 response))
+             (catch [:type :forced-redirect] {:keys [uri]}
+               (info (format "Forced redirect to %s" (str uri)))
+               (redirect-after-post (str uri)))
+             (catch [:type :error-page] {:keys [message]}
+               ;; for now
+               (response (format "Error: %s" message)))))
   :glaze [(log-glaze :info)])
+
+(defclay redirect-response
+  :value (do (when-let [action-to-run! (?? action!)]
+               (?? action-to-run!))
+             (redirect-after-post (-> redirect-uri ?? str))))
 
 (declare page-header page-footer)
 
@@ -67,8 +76,10 @@
           [:div#footer
            [:p
             [:a {:href (-> root-uri ?? str)} "(home)"]
-            ;; logon/logoff
-            ]]))
+            " "
+            (if (?? logged-on?)
+              [:a {:href (-> logoff-uri ?? str)} "(logoff)"]
+              [:a {:href (-> logon-uri ?? str)} "(logon)"])]]))
 
 (defglaze log-glaze
   :args [log-level]

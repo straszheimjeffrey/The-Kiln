@@ -74,11 +74,11 @@ components, such as:
 
 (dispatch-clay
  main-matches
- [:get "/"] {:response-type :redirect
-             :action nil
-             :redirect-uri (if (?? logged-on?)
-                             list-messages-uri
-                             logon-uri)})
+ [:get] {:response-type :redirect
+         :action nil
+         :redirect-uri (if (?? logged-on?)
+                         list-messages-uri
+                         logon-uri)})
 
 (dispatch-clay
  logon-matches
@@ -89,7 +89,7 @@ components, such as:
  [:get "logon"] {:response-type :page
                  :title "Login"
                  :body logon-body}
- [:post "logoff"] {:response-type :redirect
+ [:get "logoff"] {:response-type :redirect
                    :action logoff-action!
                    :new-session logoff-new-session
                    :redirect-uri logoff-redirect-uri})

@@ -7,7 +7,7 @@
 
 (defn- default-on-error
   [exc kiln]
-  (cleanup-kiln-failure kiln))
+  (cleanup-kiln-failure kiln)
   (throw exc))
 
 (defn kiln-ring-handler
