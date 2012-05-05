@@ -16,10 +16,15 @@
              ??
              :message-id))
 
+(defclay current-message
+  :value (md/get-message (?? message-id)))
+
+(defclay current-message-owner
+  :value (:owner (?? current-message)))
+
 (defclay my-message?
-  :value (let [{:keys [owner]} (md/get-message (?? message-id))
-               current-user (?? current-user-name)]
-           (= owner current-user)))
+  :value (= (?? current-message-owner)
+            (?? current-user-name)))
 
 (defglaze require-my-message
   :operation (if (?? my-message?)
@@ -48,10 +53,9 @@
             [:p [:a {:href (str (?? uri-with-path "/new-message"))}
                  "(new message)"]])))
 
-
 (defclay show-message-body
   :glaze [require-logged-on]
-  :value (let [{:keys [key owner header content]} (md/get-message (?? message-id))]
+  :value (let [{:keys [key owner header content]} (?? current-message)]
            [:ul
             [:li.header (h header)]
             [:li.owner "by " (h owner)]
@@ -62,8 +66,6 @@
                                    (format "/edit-message/%s" key))
                                str)}
                     "(edit message)"]])]))
-           
-  
 
 (defclay new-message-body
   :glaze [require-logged-on]
@@ -79,7 +81,7 @@
 (defclay edit-message-body
   :glaze [require-logged-on
           require-my-message]
-  :value (let [{:keys [key owner header content]} (md/get-message (?? message-id))]
+  :value (let [{:keys [key owner header content]} (?? current-message)]
            [:form {:method "post"}
             [:p "Header"]
             [:p [:input {:type "text" :name "header" :value header}]]

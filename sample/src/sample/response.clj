@@ -118,9 +118,9 @@ form input[type=text], form input[type=password], textarea
  {width: 6in;
  }
 
-ul {margin: .25in 0in;
+ul {margin: 0.25in 0in;
 }
-li {margin: 0.1in 0in;
+li {margin: 0.2in 0in;
 }
 .header {font-size: 1.1em;
              color: #222
@@ -134,7 +134,7 @@ li {margin: 0.1in 0in;
   (error exc "Exception in Kiln")
   (if (instance? Exception exc)
     ;; Handle java.lang.Exception gracefully
-    (do (cleanup-kiln-failure)
+    (do (cleanup-kiln-failure kiln)
         (-> (response "An error occurred")
             (status 500)))
     ;; Go boom for a Throwable
