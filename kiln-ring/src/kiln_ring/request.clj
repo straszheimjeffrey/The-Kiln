@@ -10,11 +10,9 @@
 (defcoal request
   "The Ring Request Object.")
 
-(defclay path-as-vector
-  "The path of the request split on /'s, to form a vec"
-  :value (let [path (:uri (?? request))]
-           (map (partial apply str)
-                (partition-by #(= % \/) path))))
+(defclay request-method
+  "The request method, :get or :post."
+  :value (-> request ?? :request-method))
 
 (defclay request-uri-as-java-uri
   "The request data as a java uri"
@@ -34,6 +32,18 @@
 (defclay request-uri
   "The request as a kiln-ring.uri-utils uri."
   :value (as-uri (?? request-uri-as-java-uri)))
+
+(defclay params
+  "The params from the request, as set by Ring middleware."
+  :value (-> request ?? :params))
+
+(defclay cookies
+  "The cookies from the request, as set by Ring middleware."
+  :value (-> request ?? :cookies))
+
+(defclay session
+  "The user session, as set by Ring middleware."
+  :value (-> request ?? :session))
 
 
 ;; End of file
