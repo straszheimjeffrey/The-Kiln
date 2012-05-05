@@ -266,6 +266,35 @@
     (is (= @store [[22 10 11]
                    [6 2 3]]))))
 
+(deftest destructuring-argument-tests
+  (let [k (new-kiln)
+        store (atom [])
+        aa (clay :name aa
+                 :args [& args]
+                 :value (reduce + args))
+        bb (glaze :name bb
+                  :args [& args]
+                  :operation (do (swap! store conj [args ?args])
+                                 (?next)))
+        cc (glaze :name cc
+                  :args [a {:keys [b c]}]
+                  :operation (do (swap! store conj [a b c ?args])
+                                 (?next)))
+        dd (clay :name dd
+                 :glaze [(bb a b 3)
+                         (cc a {:b b :c 4})]
+                 :args [{a :a b :b}]
+                 :value (+ a b))
+        ee (clay :name ee
+                 :args [a & {:keys [ralph barry]}]
+                 :value (list a ralph barry))]
+    (is (= (fire k aa 1 2) 3))
+    (is (= (fire k dd {:a 5 :b 6}) 11))
+    (is (= (fire k ee :fred :ralph :a :barry :c) (list :fred :a :c)))
+    (is (= @store
+           [[(list 5 6 3) {'a 5 'b 6}]
+            [5 6 4 {'a 5 'b 6}]]))))
+
 (deftest calling-??-in-glaze
   (let [k (new-kiln)
         store (atom [])

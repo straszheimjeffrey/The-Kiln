@@ -2,7 +2,8 @@
     ^{:doc "A new evaluation strategy for complex computations."
       :author "Jeffrey Straszheim"}
   kiln.kiln
-  (use slingshot.slingshot)
+  (use slingshot.slingshot
+       [clojure.set :only [union]])
   (require [clojure.walk :as walk]))
 
 
@@ -199,14 +200,6 @@ clay and the last are considered the clay's arguments."
      wrap-if-glazes-present
      wrap-with-args-binding
      (build-env-fun kiln-sym (list clay-sym args-sym)))))
-
-(defglaze g
-  :operation (prn ?args))
-
-(defclay c
-  :value :b
-  :args [a b]
-  :glaze [g])
   
 (def ^:private allowed-clay-kws #{:id :name :value
                                   :kiln :glaze :args :transaction-allowed?
