@@ -18,7 +18,7 @@
   :value (-> session ?? :user))
 
 (defclay current-user-name
-  :value (?? logged-on?))
+  :value (-> session ?? :user :name))
 
 (defclay admin-user?
   :value (-> session ?? :admin?))
@@ -60,9 +60,7 @@
 
 (defclay logon-body
   :value (html
-          [:form {:action (-> (?? request-uri)
-                             (assoc :path "/logon"
-                                    :query nil))
+          [:form {:action (str (?? uri-with-path "/logon"))
                   :method "post"}
            [:p "Username"]
            [:p [:input {:type "text"

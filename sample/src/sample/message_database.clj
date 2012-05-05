@@ -10,20 +10,28 @@
   store
   (ref {}))
 
+(defn- clear-store [] (dosync (ref-set store {})))
+
+(comment
+
+(clear-store)
+
+)
+
 (defn- new-key
   []
   (let [current-keys (-> @store keys set)]
-    (loop [attempted-key (rand-int 100000)]
+    (loop [attempted-key (str (rand-int 100000))]
       (if (current-keys attempted-key)
-        (recur (rand-int 100000))
+        (recur (str (rand-int 100000)))
         attempted-key))))
 
 (defn put-message
-  [name header content]
+  [user-name header content]
   (dosync
    (let [key (new-key)]
      (alter store assoc key {:key key
-                             :owner name
+                             :owner user-name
                              :header header
                              :content content}))))
 
@@ -42,4 +50,4 @@
 (defn get-message-list
   []
   (for [message (-> store deref vals)]
-    (select-keys message :key :owner :header)))
+    (select-keys message [:key :owner :header])))
