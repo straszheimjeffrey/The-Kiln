@@ -104,6 +104,10 @@ div {margin: .25in 0in;
 }
 h1 {font-size: 1.3em;
 }
+h2 {font-size: 1.1em;
+    color: #333;
+    margin: 0.25in 0in;
+}
 a, a:visited {color: #225;
               text-decoration: none;
               font-size: 0.8em;
@@ -113,6 +117,8 @@ a:hover {color: #448;
 form p {margin: 5px 0px;
 }
 p { margin: 0.25in 0px;
+}
+.error {color: #533;
 }
 form input[type=text], form input[type=password], textarea
  {width: 6in;

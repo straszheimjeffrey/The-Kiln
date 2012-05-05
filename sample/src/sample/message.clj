@@ -23,8 +23,9 @@
   :value (:owner (?? current-message)))
 
 (defclay my-message?
-  :value (= (?? current-message-owner)
-            (?? current-user-name)))
+  :value (or (?? admin-user?)
+             (= (?? current-message-owner)
+                (?? current-user-name))))
 
 (defglaze require-my-message
   :operation (if (?? my-message?)

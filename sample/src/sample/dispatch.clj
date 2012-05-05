@@ -79,7 +79,7 @@ components, such as:
          :redirect-uri (if (?? logged-on?)
                          list-messages-uri
                          logon-uri)})
-
+ 
 (dispatch-clay
  logon-matches
  [:post "logon"] {:response-type :redirect
@@ -89,6 +89,9 @@ components, such as:
  [:get "logon"] {:response-type :page
                  :title "Login"
                  :body logon-body}
+ [:get "failed-logon"] {:response-type :page
+                        :title "Login"
+                        :body failed-logon-body}
  [:get "logoff"] {:response-type :redirect
                    :action logoff-action!
                    :new-session logoff-new-session

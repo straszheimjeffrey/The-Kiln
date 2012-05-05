@@ -40,7 +40,9 @@
 
 (defclay logon-action!
   :value (let [{:keys [name pass]} (?? params)]
-           {:success? (= name pass)
+           {:success? (and name
+                           (> (count name) 0)
+                           (= name pass))
             :admin? (= name "admin")
             :name name}))
 
@@ -56,19 +58,28 @@
   :value (let [logon-stuff (?? logon-action!)]
            (if (:success? logon-stuff)
              (?? list-messages-uri)
-             (?? error-uri "failed-logon"))))
+             (?? failed-logon-uri))))
+
+(defn- logon-body-text
+  [uri error-message]
+  (html
+   [:h2.error (h error-message)]
+   [:form {:action (str uri)
+           :method "post"}
+    [:p "Username"]
+    [:p [:input {:type "text"
+                 :name "name"}]]
+    [:p "Password"]
+    [:p [:input {:type "password"
+                 :name "pass"}]]
+    [:p [:input {:type "submit"}]]]))
 
 (defclay logon-body
-  :value (html
-          [:form {:action (str (?? uri-with-path "/logon"))
-                  :method "post"}
-           [:p "Username"]
-           [:p [:input {:type "text"
-                        :name "name"}]]
-           [:p "Password"]
-           [:p [:input {:type "password"
-                        :name "pass"}]]
-           [:p [:input {:type "submit"}]]]))
+  :value (logon-body-text (?? logon-uri) nil))
+
+(defclay failed-logon-body
+  :value (logon-body-text (?? logon-uri)
+                          "Sorry, we do not recognize that name and password"))
 
 (defclay logoff-action!
   :value :none)

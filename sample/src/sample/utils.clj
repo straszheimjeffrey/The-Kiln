@@ -20,15 +20,14 @@
 (defclay logon-uri
   :value (?? uri-with-path "/logon"))
 
+(defclay failed-logon-uri
+  :value (?? uri-with-path "/failed-logon"))
+
 (defclay logoff-uri
   :value (?? uri-with-path "/logoff"))
 
 (defclay list-messages-uri
   :value (?? uri-with-path "/list-messages"))
-
-(defclay error-uri
-  :args [error]
-  :value (?? uri-with-path (format "/error/%s" error)))
 
 (defn- log-helper
   [level message clay-name extra show-extra? console-also?]
