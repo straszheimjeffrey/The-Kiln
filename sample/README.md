@@ -52,7 +52,8 @@ straszheimjeffrey@gmail.com
 ## Usage
 
 Checkout this code from git. It can be run directly from the command
-line if you have lein ring installed.
+line if you have lein ring installed. Or else, you can evaluate the
+sample.repl module and run `(start-server)` from there.
 
 ## License
 

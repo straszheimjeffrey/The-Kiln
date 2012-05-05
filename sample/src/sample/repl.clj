@@ -6,7 +6,7 @@
        clojure.tools.logging
        [ring.adapter.jetty :only [run-jetty]]
        [ring.middleware.stacktrace :only [wrap-stacktrace-web]])
-  (require [kiln-ring.server :as server])
+  (require [sample.response :as server])
   (import (org.apache.log4j Logger
                             Level
                             PatternLayout
@@ -36,6 +36,17 @@
 
 (defonce server nil)
 
+#_(use 'clojure.pprint)
+#_(defn- wrap-inspect
+  [handler]
+  (fn [request]
+    (println "Request")
+    (pprint request)
+    (let [res (handler request)]
+      (print "Response")
+      (pprint res)
+      res)))
+
 (defn start-server
   [port]
   (add-logging)
@@ -44,7 +55,7 @@
   (alter-var-root
    #'server
    (fn [_]
-     (run-jetty (wrap-stacktrace-web server/handler)
+     (run-jetty (wrap-stacktrace-web server/my-handler)
                 {:port port
                  :join? false}))))
 

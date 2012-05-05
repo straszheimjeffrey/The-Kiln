@@ -66,7 +66,6 @@ log-to-console? also calls println on the message."
                    clay-name (:name ?clay)]
                (log-helper log-level "Running" clay-name
                            #(pr-str ?args) show-args? log-to-console?)
-               (log log-level (format "Running %s" clay-name))
                (let [result (?next)]
                  (log-helper log-level "Completed" clay-name
                              #(pr-str result) show-results? log-to-console?)
