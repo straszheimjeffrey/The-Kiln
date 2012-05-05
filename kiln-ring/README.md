@@ -17,6 +17,12 @@ The principle of this is simple:
 
 Your code can be as simple as this:
 
+In your project.clj, put this:
+
+````clojure
+[kiln/kiln-ring "0.0.1"]
+````
+
 ````clojure
 (use kiln.kiln
      [kiln-ring server response]

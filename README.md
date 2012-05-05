@@ -101,6 +101,10 @@ manageable. It is built around these principles:
 
 ## Usage
 
+````clojure
+[kiln "0.0.2"]
+````
+
 To start with, you must create some "coal". Coals are your base
 values, the ones not computed from other things in the kiln. For a
 webapp, we'll use the request object.
