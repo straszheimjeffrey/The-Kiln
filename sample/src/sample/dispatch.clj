@@ -54,9 +54,9 @@ kiln-ring.uri-utils.uri."
   "The title to show."
   :value (-> main-dispatch ?? :title))
 
-;; Like action!, this returns an unevaluated clay.
+;; The HTML text of the main body
 (defclay page-body
-  "The main body of the page, a clay."
+  "The main body of the page, HTML text."
   :value (-> main-dispatch ?? :body ??))
 
 
