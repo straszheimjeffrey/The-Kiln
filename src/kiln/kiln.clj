@@ -102,7 +102,7 @@ clay and the last are considered the clay's arguments."
 
 (defn- cleanup
   [^kiln.kiln.kiln_protocol kiln keys]
-  (let [exceptions (atom [])]
+  (let [exceptions (ref [])]
     (doseq [[clay args] (kiln-ops (get-cleanups-from-kiln kiln))]
       (let [funs (keep #(get clay %) keys)]
         (assert (apply clay-fired? kiln clay args))
@@ -111,7 +111,7 @@ clay and the last are considered the clay's arguments."
             (try
               (apply fun kiln result args)
               (catch Exception e
-                (swap! exceptions conj e)))))))
+                (dosync (alter exceptions conj e))))))))
     @exceptions))
       
 (defn- cleanup-kiln-which
