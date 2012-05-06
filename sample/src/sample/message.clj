@@ -131,8 +131,7 @@ messages."
 (defclay edit-message-action!
   :glaze [require-logged-on
           require-my-message]
-  :value (let [{:keys [body header]} (?? params)
-               current-user-name (?? current-user-name)]
+  :value (let [{:keys [body header]} (?? params)]
            (md/edit-message (?? message-id) header body)))
 
 (defclay edit-message-redirect-uri

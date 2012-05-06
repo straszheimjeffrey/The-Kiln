@@ -24,7 +24,8 @@
   :value (-> session ?? :admin?))
 
 
-;; These are some glazes you can add to a clay to provide security.
+;; These are some glazes you can add to a clay to provide
+;; security. You can see these get used in the sample.message module.
 
 (defglaze require-logged-on
   :operation (if (?? logged-on?)
