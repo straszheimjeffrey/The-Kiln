@@ -18,7 +18,7 @@
 ;; the request-method or the uri. But clays that actually do the
 ;; application work are not called. The reason for this is simple: we
 ;; have to calculate the dispatch data *before* we can compute the
-;; business logic, since they depend on it.
+;; business logic, since the business logic depends on it.
 
 
 ;; I define main-dispatch later. For now, know that it returns a map
@@ -134,17 +134,11 @@ components, such as:
                          list-messages-uri
                          logon-uri)})
 
-;; Stop and notice something! Look at the :redirect-uri field in
-;; main-matches. That result (which is either list-messages-uri or
-;; logon-uri) is a clay. But we do not evaluate it now. If we tried,
-;; it would go into a loop, since they each need the output of the
-;; dispatcher. But we *are* the dispatcher. For now, we return the
-;; clays and let someone else evaluate them.
 
-
-;; Logon and logoff. These have action and body clays. Like the URI
-;; clays above, we return them, but do not call them. The definition
-;; of these clays are in the sample.logon module.
+;; Logon and logoff. This is more interesting. Here we have action and
+;; body clays such as logon-action! and logon-body, which are defined
+;; in the sample.logon-logoff module. Note we are not evaluating them
+;; here, only setting them into a map.
 (dispatch-clay
  logon-matches
  [:post "logon"] {:response-type :redirect
