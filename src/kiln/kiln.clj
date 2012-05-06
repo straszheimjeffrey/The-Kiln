@@ -7,14 +7,14 @@
   (require [clojure.walk :as walk]))
 
 (defprotocol ^:private kiln-protocol
-  (^:private get-item-from-kiln [self id])
-  (^:private put-item-in-kiln [self id val])
-  (^:private add-cleanup-to-kiln [self item])
-  (^:private get-cleanups-from-kiln [self])
-  (^:private is-kiln-cleaning? [self]))
+             (^:private get-item-from-kiln [self id])
+             (^:private put-item-in-kiln [self id val])
+             (^:private add-cleanup-to-kiln [self item])
+             (^:private get-cleanups-from-kiln [self])
+             (^:private is-kiln-cleaning? [self]))
 
 (deftype ^:private kiln
-    [vals cleanups currently-cleaning?]
+  [vals cleanups currently-cleaning?]
   kiln-protocol
   (get-item-from-kiln [self id]
     (get @vals id ::kiln-item-not-found))
@@ -62,7 +62,7 @@ clay and the last are considered the clay's arguments."
   (or (:cleanup clay)
       (:cleanup-success clay)
       (:cleanup-failure clay)))
-  
+
 (defn fire
   "Run the clay within the kiln to compute/retrieve its value."
   [^kiln.kiln.kiln_protocol kiln clay & args] ; the clay can be a coal
@@ -118,7 +118,7 @@ clay and the last are considered the clay's arguments."
               (catch Exception e
                 (dosync (alter exceptions conj e))))))))
     @exceptions))
-      
+
 (defn- cleanup-kiln-which
   [kiln which]
   (let [exceptions (cleanup kiln [:cleanup which])]
@@ -133,7 +133,7 @@ clay and the last are considered the clay's arguments."
   invoked."
   [kiln]
   (cleanup-kiln-which kiln :cleanup-success))
-                    
+
 (defn cleanup-kiln-failure
   "Run the cleanup and cleanup-failure routines for each needed
   clay. Cleanups are run in reverse order from when the clay was
@@ -212,7 +212,7 @@ clay and the last are considered the clay's arguments."
      wrap-if-glazes-present
      wrap-with-args-binding
      (build-env-fun kiln-sym (list clay-sym args-sym)))))
-  
+
 (def ^:private allowed-clay-kws #{:id :name :value
                                   :kiln :glaze :args
                                   :cleanup :cleanup-success :cleanup-failure
@@ -372,7 +372,7 @@ called with.
         id (if cur-var (:id @cur-var) nil)]
     `(def ~(with-meta name (assoc (meta name) :doc comment))
        (~builder :name ~q-name :id ~id ~@body))))
-    
+
 (defmacro defclay
   "Define a clay at the top level, ensure the name is set correctly."
   [name & stuff]

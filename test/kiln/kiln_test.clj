@@ -53,7 +53,7 @@
   :cleanup (reset! (?? coal-2) [])
   :value (do (?? bob)
              (swap! (?? coal-2) (fn [k] (vec (concat k k))))))
-  
+
 ;; A very basic test
 
 (deftest basic-kiln-test
@@ -190,7 +190,7 @@
 (defclay loopy-clay :value (?? loopy-clay))
 (defclay deadly :value (?? embrace))
 (defclay embrace :value (?? deadly))
-  
+
 (deftest test-loopy-clay
   (let [k (new-kiln)]
     (is (= :exception-thrown
@@ -336,7 +336,7 @@
     (fire k d 3)
     (fire k e)
     (is (= @store [5 3]))))
-                 
+
 (deftest exceptions-unwrap-correctly
   (let [k (new-kiln)
         a (clay :name a
@@ -372,8 +372,8 @@
 
 (comment
 
-(run-tests)
+  (run-tests)
 
-)
+  )
 
 ;; End of file
