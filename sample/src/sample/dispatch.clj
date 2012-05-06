@@ -14,8 +14,8 @@
 ;; Server.
 
 ;; The thing to notice in this code is this: it does not evaluate any
-;; business logic clay. It will use requst oriented clays, such as the
-;; request-method or the uri. But clays that actually do the
+;; business logic clay. It will use request oriented clays, such as
+;; the request-method or the uri. But clays that actually do the
 ;; application work are not called. The reason for this is simple: we
 ;; have to calculate the dispatch data *before* we can compute the
 ;; business logic, since they depend on it.
