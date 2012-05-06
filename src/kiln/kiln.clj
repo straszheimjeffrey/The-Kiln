@@ -248,7 +248,7 @@ the :glaze list.
 :cleanup, :cleanup-success, :cleanup-failure - code to run at cleanup
 time. :cleanup always runs, followed by either :cleanup-success
 or :cleanup-failure, depending on which cleanup method is used. Each
-cleanup routing is passed an additional argument ?self, which is the
+cleanup routine is passed an additional argument ?self, which is the
 original value computed for this clay. Also, the (?? clay ...) syntax
 works here.
 
