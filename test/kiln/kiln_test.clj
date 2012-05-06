@@ -6,8 +6,8 @@
 (deftest test-new-kiln
   (let [k (new-kiln)]
     (is (:kiln.kiln/kiln? k))
-    (dosync (alter (:vals k) assoc :fred :mary))
-    (dosync (alter (:needs-cleanup k) conj :fred))
+    (swap! (:vals k) assoc :fred :mary)
+    (swap! (:needs-cleanup k) conj :fred)
     (is (= @(:vals k) {:fred :mary}))
     (is (= @(:needs-cleanup k) [:fred]))))
 
@@ -317,29 +317,6 @@
     (fire k e)
     (is (= @store [5 3]))))
                  
-(deftest transactioned-test
-  (let [a (clay :name a
-                :value :fred
-                :transaction-allowed? true)
-        b (clay :name b
-                :value :mary
-                :transaction-allowed? false)
-        c (clay :name c
-                :value [(?? a) (?? b)]
-                :transaction-allowed? true)
-        exception-thrown? (atom false)
-        should-fail (fn [fun]
-                      (do
-                        (try+
-                         (fun)
-                         (catch Exception e
-                           (reset! exception-thrown? true)))
-                        (is @exception-thrown?)))]
-    (is (= (fire (new-kiln) c) [:fred :mary]))
-    (should-fail #(dosync (fire (new-kiln) c)))
-    (is (= (dosync (fire (new-kiln) a))
-           :fred))))
-
 (deftest exceptions-unwrap-correctly
   (let [k (new-kiln)
         a (clay :name a
@@ -350,7 +327,8 @@
      (catch [:type :exc] _
        (reset! exception-thrown? true)))
     (is @exception-thrown?)
-    (is (-> k :vals deref vals first nil?))))
+    (is (= :kiln.kiln/clay-had-error
+           (-> k :vals deref vals first)))))
 
 (deftest test-unsafe-set-clay!!
   (let [k (new-kiln)
