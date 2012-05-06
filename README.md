@@ -133,9 +133,9 @@ Enter clays and kilns. The kiln gathers all this data into one scoped
 mechanism where it is visible but controlled.
 
 For a more detailed example, including how clays cleanup after
-themselves (such as a database connection that knows to close) and how
-clays can be wrapped by *glaze*, which provides features similar to
-middleware/aspects/etc., go [here]
+themselves (such as your database connection clay, which knows to
+close) and how clays can be wrapped by *glaze*, which provides
+features similar to middleware/aspects/etc., go [here]
 (http://github.com/straszheimjeffrey/The-Kiln/wiki/Worked_Example).
 
 
