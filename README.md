@@ -91,8 +91,8 @@ Looks random enough. But what about this:
 Within the same kiln, a clay remembers its value.
 
 This is the point of kilns and clays. Within a single kiln, a clay is
-some *particular* value that was computed. Normally, it will be
-computed from the other clays in the kiln. Plus the coals.
+some *particular* value that was computed. Normally, its value will
+depend on the other clays in the kiln. Plus the coals.
 
 A coal is like a clay, except with a coal, you do not compute its
 value in the kiln. Instead, you *set* its value. We call that
