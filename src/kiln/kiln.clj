@@ -12,9 +12,8 @@
   "Return a blank kiln ready to stoke and fire."
   []
   {::kiln? true
-   :vals (ref {})
-   :needs-cleanup (ref nil)
-   :cleanup-exceptions (ref [])})
+   :vals (atom {})
+   :needs-cleanup (atom nil)})
 
 (defn- clay-key
   [clay args]
@@ -26,8 +25,7 @@
   [kiln coal val]
   {:pre [(::kiln? kiln)
          (::coal? coal)]}
-  (dosync
-   (alter (:vals kiln) assoc (clay-key coal nil) val)))
+  (swap! (:vals kiln) assoc (clay-key coal nil) val))
 
 (defn unsafe-set-clay!!
   "This will set the value of a clay within the kiln without
@@ -39,8 +37,7 @@ clay and the last are considered the clay's arguments."
          (::clay? clay)]}
   (let [val (last args-and-val)
         args (butlast args-and-val)]
-    (dosync
-     (alter (:vals kiln) assoc (clay-key clay args) val))))
+    (swap! (:vals kiln) assoc (clay-key clay args) val)))
 
 (defn- has-cleanup?  [clay]
   (or (:cleanup clay)
@@ -52,13 +49,14 @@ clay and the last are considered the clay's arguments."
   [kiln clay & args] ; the clay can be a coal
   {:pre [(::kiln? kiln)
          (or (::clay? clay) (::coal? clay))]}
-  (when-not (:transaction-allowed? clay)
-    (io! "Non-transactional clay evaluated within transaction."))
   (let [key (clay-key clay args)
         value (get @(:vals kiln) key ::value-of-clay-not-found)]
     (cond
      (= value ::running) ; uh-oh, we have a loop.
      (throw+ {:type :kiln-loop :clay clay :kiln kiln})
+
+     (= value ::clay-had-error)
+     (throw+ {:type :kiln-clay-had-error :clay clay :kiln kiln})
 
      (not= value ::value-of-clay-not-found) ; yay! it's there!
      value
@@ -66,20 +64,18 @@ clay and the last are considered the clay's arguments."
      :otherwise ; gotta get it.
      (if-not (::cleanup? kiln)
        (if (::clay? clay)
-         (do
-           ;; compute and store result
-           (let [result (try
-                          (dosync (alter (:vals kiln) assoc key ::running))
-                          ((:fun clay) kiln clay args)
-                          (catch Throwable e
-                            (dosync (alter (:vals kiln) assoc key nil))
-                            (throw e)))]
-             (dosync
-              (alter (:vals kiln) assoc key result)
-              (when (has-cleanup? clay)
-                (alter (:needs-cleanup kiln) conj {:clay clay
-                                                   :args args})))
-             result))
+         ;; compute and store result
+         (let [result (try
+                        (swap! (:vals kiln) assoc key ::running)
+                        ((:fun clay) kiln clay args)
+                        (catch Throwable e
+                          (swap! (:vals kiln) assoc key ::clay-had-error)
+                          (throw e)))]
+           (swap! (:vals kiln) assoc key result)
+           (when (has-cleanup? clay)
+             (swap! (:needs-cleanup kiln) conj {:clay clay
+                                                :args args}))
+             result)
          (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
        (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
 
@@ -92,7 +88,8 @@ clay and the last are considered the clay's arguments."
 
 (defn- cleanup
   [kiln keys]
-  (let [kiln (assoc kiln ::cleanup? true)]
+  (let [exceptions (atom [])
+        kiln (assoc kiln ::cleanup? true)]
     (doseq [clay-map @(:needs-cleanup kiln)]
       (let [clay (:clay clay-map)
             args (:args clay-map)
@@ -103,17 +100,18 @@ clay and the last are considered the clay's arguments."
             (doseq [fun funs]
               (apply fun kiln result args)))
           (catch Exception e
-            (dosync (alter (:cleanup-exceptions kiln) conj e))))))))
+            (swap! exceptions conj e)))))
+    @exceptions))
       
 (defn- cleanup-kiln-which
   [kiln which]
   {:pre [(::kiln? kiln)]}
-  (cleanup kiln [:cleanup which])
-  (dosync (ref-set (:needs-cleanup kiln) []))
-  (if-not (empty? @(:cleanup-exceptions kiln))
-    (throw+ {:type :kiln-cleanup-exception
-             :kiln kiln
-             :exceptions @(:cleanup-exceptions kiln)})))
+  (let [exceptions (cleanup kiln [:cleanup which])]
+    (reset! (:needs-cleanup kiln) nil)
+    (if-not (empty? exceptions)
+      (throw+ {:type :kiln-cleanup-exception
+               :kiln kiln
+               :exceptions exceptions}))))
 
 (defn cleanup-kiln-success
   "Run the cleanup and cleanup-success routines for each needed
