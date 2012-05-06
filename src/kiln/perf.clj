@@ -15,7 +15,7 @@
     (dotimes [i count]
       (fire k do-not-much i))))
       
-      
+(time (run-it 10000))      
 
 
 ;; End of file

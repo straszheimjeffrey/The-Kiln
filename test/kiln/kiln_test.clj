@@ -3,13 +3,33 @@
   (use slingshot.slingshot)
   (use kiln.kiln))
 
+(def ^{:macro true} ko @#'kiln.kiln/kiln-ops)
+
 (deftest test-new-kiln
   (let [k (new-kiln)]
-    (is (:kiln.kiln/kiln? k))
-    (swap! (:vals k) assoc :fred :mary)
-    (swap! (:needs-cleanup k) conj :fred)
-    (is (= @(:vals k) {:fred :mary}))
-    (is (= @(:needs-cleanup k) [:fred]))))
+    (ko
+     (put-item-in-kiln k :fred [0 1 2] :first)
+     (put-item-in-kiln k :mary [0 1 2] :second))
+    (ko
+     (add-cleanup-to-kiln k :a-cleanup)
+     (put-item-in-kiln k :fred [1 1 1] :third)
+     (is (= (get-item-from-kiln k :fred [0 1 2])
+            :first)))
+    (ko
+     (add-cleanup-to-kiln k :another-cleanup))
+    (is (= (get-item-from-kiln k :fred [1 1 1])
+           :third))
+    (is (= (get-item-from-kiln k :mary [0 1 2])
+           :second))
+    (is (= (get-item-from-kiln k :bleh :blay)
+           :kiln.kiln/kiln-item-not-found))
+    (is (not (is-kiln-cleaning? k)))
+    (ko
+     (is (= (get-cleanups-from-kiln k)
+            '(:another-cleanup :a-cleanup)))
+     (is (is-kiln-cleaning? k)))
+    (ko
+     (is (nil? (get-cleanups-from-kiln k))))))
 
 ;; Some basic coals
 
@@ -320,15 +340,15 @@
 (deftest exceptions-unwrap-correctly
   (let [k (new-kiln)
         a (clay :name a
-                :value (throw+ {:type :exc}))
-        exception-thrown? (atom false)]
-    (try+
-     (fire k a)
-     (catch [:type :exc] _
-       (reset! exception-thrown? true)))
-    (is @exception-thrown?)
+                :value (throw+ {:type :exc}))]
+    (is (= :exception-thrown)
+        (try+
+         (fire k a)
+         :exception-not-thrown
+         (catch [:type :exc] _
+           :exception-thrown)))
     (is (= :kiln.kiln/clay-had-error
-           (-> k :vals deref vals first)))))
+           (get-item-from-kiln k (:id a) nil)))))
 
 (deftest test-unsafe-set-clay!!
   (let [k (new-kiln)
