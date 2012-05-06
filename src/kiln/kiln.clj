@@ -209,7 +209,7 @@ clay and the last are considered the clay's arguments."
      (build-env-fun kiln-sym (list clay-sym args-sym)))))
   
 (def ^:private allowed-clay-kws #{:id :name :value
-                                  :kiln :glaze :args :transaction-allowed?
+                                  :kiln :glaze :args
                                   :cleanup :cleanup-success :cleanup-failure
                                   :extra})
 
@@ -238,9 +238,6 @@ this symbol.
 :args - a vec of symbols, the arguments that can be passed to this
 clay. The args are visible within the :value, the :cleanups, and
 the :glaze list.
-
-:transaction-allowed? - if true, this clay can be evaluated within a
-dosync block, otherwise will fail as in core/io!.
 
 :cleanup, :cleanup-success, :cleanup-failure - code to run at cleanup
 time. :cleanup always runs, followed by either :cleanup-success
