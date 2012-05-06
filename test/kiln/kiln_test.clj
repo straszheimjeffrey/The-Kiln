@@ -8,28 +8,28 @@
 (deftest test-new-kiln
   (let [k (new-kiln)]
     (ko
-     (put-item-in-kiln k :fred :first)
-     (put-item-in-kiln k :mary :second))
+     (#'kiln.kiln/put-item-in-kiln k :fred :first)
+     (#'kiln.kiln/put-item-in-kiln k :mary :second))
     (ko
-     (add-cleanup-to-kiln k :a-cleanup)
-     (put-item-in-kiln k :fred :third)
-     (is (= (get-item-from-kiln k :fred)
+     (#'kiln.kiln/add-cleanup-to-kiln k :a-cleanup)
+     (#'kiln.kiln/put-item-in-kiln k :fred :third)
+     (is (= (#'kiln.kiln/get-item-from-kiln k :fred)
             :third)))
     (ko
-     (add-cleanup-to-kiln k :another-cleanup))
-    (is (= (get-item-from-kiln k :fred)
+     (#'kiln.kiln/add-cleanup-to-kiln k :another-cleanup))
+    (is (= (#'kiln.kiln/get-item-from-kiln k :fred)
            :third))
-    (is (= (get-item-from-kiln k :mary)
+    (is (= (#'kiln.kiln/get-item-from-kiln k :mary)
            :second))
-    (is (= (get-item-from-kiln k :bleh)
+    (is (= (#'kiln.kiln/get-item-from-kiln k :bleh)
            :kiln.kiln/kiln-item-not-found))
-    (is (not (is-kiln-cleaning? k)))
+    (is (not (#'kiln.kiln/is-kiln-cleaning? k)))
     (ko
-     (is (= (get-cleanups-from-kiln k)
+     (is (= (#'kiln.kiln/get-cleanups-from-kiln k)
             '(:another-cleanup :a-cleanup)))
-     (is (is-kiln-cleaning? k)))
+     (is (#'kiln.kiln/is-kiln-cleaning? k)))
     (ko
-     (is (nil? (get-cleanups-from-kiln k))))))
+     (is (nil? (#'kiln.kiln/get-cleanups-from-kiln k))))))
 
 ;; Some basic coals
 
@@ -348,7 +348,7 @@
          (catch [:type :exc] _
            :exception-thrown)))
     (is (= :kiln.kiln/clay-had-error
-           (get-item-from-kiln k (#'kiln.kiln/clay-id a nil))))))
+           (#'kiln.kiln/get-item-from-kiln k (#'kiln.kiln/clay-id a nil))))))
 
 (deftest test-unsafe-set-clay!!
   (let [k (new-kiln)

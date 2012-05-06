@@ -6,14 +6,14 @@
        [clojure.set :only [union]])
   (require [clojure.walk :as walk]))
 
-(defprotocol kiln-protocol
-  (get-item-from-kiln [self id])
-  (put-item-in-kiln [self id val])
-  (add-cleanup-to-kiln [self item])
-  (get-cleanups-from-kiln [self])
-  (is-kiln-cleaning? [self]))
+(defprotocol ^:private kiln-protocol
+  (^:private get-item-from-kiln [self id])
+  (^:private put-item-in-kiln [self id val])
+  (^:private add-cleanup-to-kiln [self item])
+  (^:private get-cleanups-from-kiln [self])
+  (^:private is-kiln-cleaning? [self]))
 
-(deftype kiln
+(deftype ^:private kiln
     [vals cleanups currently-cleaning?]
   kiln-protocol
   (get-item-from-kiln [self id]
