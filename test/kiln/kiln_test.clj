@@ -8,20 +8,20 @@
 (deftest test-new-kiln
   (let [k (new-kiln)]
     (ko
-     (put-item-in-kiln k :fred [0 1 2] :first)
-     (put-item-in-kiln k :mary [0 1 2] :second))
+     (put-item-in-kiln k :fred :first)
+     (put-item-in-kiln k :mary :second))
     (ko
      (add-cleanup-to-kiln k :a-cleanup)
-     (put-item-in-kiln k :fred [1 1 1] :third)
-     (is (= (get-item-from-kiln k :fred [0 1 2])
-            :first)))
+     (put-item-in-kiln k :fred :third)
+     (is (= (get-item-from-kiln k :fred)
+            :third)))
     (ko
      (add-cleanup-to-kiln k :another-cleanup))
-    (is (= (get-item-from-kiln k :fred [1 1 1])
+    (is (= (get-item-from-kiln k :fred)
            :third))
-    (is (= (get-item-from-kiln k :mary [0 1 2])
+    (is (= (get-item-from-kiln k :mary)
            :second))
-    (is (= (get-item-from-kiln k :bleh :blay)
+    (is (= (get-item-from-kiln k :bleh)
            :kiln.kiln/kiln-item-not-found))
     (is (not (is-kiln-cleaning? k)))
     (ko
@@ -348,7 +348,7 @@
          (catch [:type :exc] _
            :exception-thrown)))
     (is (= :kiln.kiln/clay-had-error
-           (get-item-from-kiln k (:id a) nil)))))
+           (get-item-from-kiln k (#'kiln.kiln/clay-id a nil))))))
 
 (deftest test-unsafe-set-clay!!
   (let [k (new-kiln)

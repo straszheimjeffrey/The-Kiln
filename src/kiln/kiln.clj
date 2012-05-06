@@ -7,8 +7,8 @@
   (require [clojure.walk :as walk]))
 
 (defprotocol kiln-protocol
-  (get-item-from-kiln [self id args])
-  (put-item-in-kiln [self id args val])
+  (get-item-from-kiln [self id])
+  (put-item-in-kiln [self id val])
   (add-cleanup-to-kiln [self item])
   (get-cleanups-from-kiln [self])
   (is-kiln-cleaning? [self]))
@@ -16,10 +16,10 @@
 (deftype kiln
     [vals cleanups currently-cleaning?]
   kiln-protocol
-  (get-item-from-kiln [self id args]
-    (get @vals [id args] ::kiln-item-not-found))
-  (put-item-in-kiln [self id args val]
-    (alter vals assoc [id args] val))
+  (get-item-from-kiln [self id]
+    (get @vals id ::kiln-item-not-found))
+  (put-item-in-kiln [self id val]
+    (alter vals assoc id val))
   (add-cleanup-to-kiln [self item]
     (alter cleanups conj item))
   (get-cleanups-from-kiln [self]
@@ -37,11 +37,15 @@
   []
   (kiln. (ref {}) (ref nil) (ref false)))
 
+(defn- clay-id
+  [clay args]
+  [(:id clay) args])
+
 (defn stoke-coal
   "Within the kiln, set the coal to the desired value."
   [^kiln.kiln.kiln_protocol kiln coal val]
   {:pre [(::coal? coal)]}
-  (kiln-ops (put-item-in-kiln kiln (:id coal) nil val)))
+  (kiln-ops (put-item-in-kiln kiln (clay-id coal nil) val)))
 
 (defn unsafe-set-clay!!
   "This will set the value of a clay within the kiln without
@@ -52,7 +56,7 @@ clay and the last are considered the clay's arguments."
   {:pre [(::clay? clay)]}
   (let [val (last args-and-val)
         args (butlast args-and-val)]
-    (kiln-ops (put-item-in-kiln kiln (:id clay) args val))))
+    (kiln-ops (put-item-in-kiln kiln (clay-id clay args) val))))
 
 (defn- has-cleanup?  [clay]
   (or (:cleanup clay)
@@ -63,7 +67,8 @@ clay and the last are considered the clay's arguments."
   "Run the clay within the kiln to compute/retrieve its value."
   [^kiln.kiln.kiln_protocol kiln clay & args] ; the clay can be a coal
   {:pre [(or (::clay? clay) (::coal? clay))]}
-  (let [value (get-item-from-kiln kiln (:id clay) args)]
+  (let [id (clay-id clay args)
+        value (get-item-from-kiln kiln id)]
     (cond
      (= value ::running) ; uh-oh, we have a loop.
      (throw+ {:type :kiln-loop :clay clay :kiln kiln})
@@ -79,14 +84,14 @@ clay and the last are considered the clay's arguments."
        (if (::clay? clay)
          ;; compute and store result
          (let [result (try
-                        (kiln-ops (put-item-in-kiln kiln (:id clay) args ::running))
+                        (kiln-ops (put-item-in-kiln kiln id ::running))
                         ((:fun clay) kiln clay args)
                         (catch Throwable e
                           (kiln-ops
-                           (put-item-in-kiln kiln (:id clay) args ::clay-had-error))
+                           (put-item-in-kiln kiln id ::clay-had-error))
                           (throw e)))]
            (kiln-ops
-            (put-item-in-kiln kiln (:id clay) args result)
+            (put-item-in-kiln kiln id result)
             (when (has-cleanup? clay)
               (add-cleanup-to-kiln kiln [clay args])))
            result)
@@ -97,7 +102,7 @@ clay and the last are considered the clay's arguments."
   "Has this clay been fired?"
   [^kiln.kiln.kiln_protocol kiln clay & args]
   {:pre [(or (::clay? clay) (::coal? clay))]}
-  (not= (get-item-from-kiln kiln (:id clay) args)
+  (not= (get-item-from-kiln kiln (clay-id clay args))
         ::kiln-item-not-found))
 
 (defn- cleanup
