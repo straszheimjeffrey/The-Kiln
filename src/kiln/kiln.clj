@@ -220,7 +220,8 @@ clay and the last are considered the clay's arguments."
                                   :extra})
 
 (defmacro clay
-  "Builds a clay object. The arguments are alternating key-values, like this:
+  "Builds a clay object. The arguments are alternating key-values,
+like this:
 
  (clay :glaze [glaze-one glaze-two]
        :args [item]
@@ -248,7 +249,7 @@ the :glaze list.
 :cleanup, :cleanup-success, :cleanup-failure - code to run at cleanup
 time. :cleanup always runs, followed by either :cleanup-success
 or :cleanup-failure, depending on which cleanup method is used. Each
-cleanup routing is passed an additional argument ?self, which is the
+cleanup routine is passed an additional argument ?self, which is the
 original value computed for this clay. Also, the (?? clay ...) syntax
 works here.
 
@@ -310,7 +311,8 @@ glaze first and the arguments following, like this:
 (def ^:private allowed-glaze-kws #{:id :name :kiln :operation :args})
 
 (defmacro glaze
-  "Build a glaze. See the docstring for clay for the basic principles. Glazes allow the following to be defined:
+  "Build a glaze. See the docstring of clay for the basic
+principles. Glazes allow the following to be defined:
 
 :id - as clay
 

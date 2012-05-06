@@ -82,7 +82,10 @@
 (declare page-header page-footer stylesheet)
 
 ;; For a page, we put it together from these clays: page-title,
-;; stylesheet, page-header, page-body, page-footer.
+;; stylesheet, page-header, page-body, page-footer. The stylesheet,
+;; header, and footer are defined in this module. The title and body
+;; are defined in the sample.dispatch module, as they depend on how we
+;; dispatch.
 (defclay page-to-show
   "The page"
   :value (html
