@@ -33,7 +33,7 @@ The trickiest part of this code, in my opinion, is the dispatcher: it
 works backward! In a normal dispatcher, you break apart the request,
 get the data from it, and then call the business logic code with that
 data. In a Kiln dispatcher, you break apart the request, but only to
-provide data which will be used elsehwere. The dispatcher returns
+provide data which will be used elsewhere. The dispatcher returns
 clays that will do the work, but it does not evaluate them.
 
 In short, the dispatcher calls no code. It *chooses* the code, and
