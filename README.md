@@ -11,6 +11,8 @@ The Kiln can help.
 
 * [Why Use the Kiln]
   (http://github.com/straszheimjeffrey/The-Kiln/wiki/Why)
+* [A Worked Example]
+  (http://github.com/straszheimjeffrey/The-Kiln/wiki/Worked_Example)
 * [A Sample Application]
   (http://github.com/straszheimjeffrey/The-Kiln/tree/master/sample)
 * Kiln Style Guile (comming soon)
@@ -23,208 +25,118 @@ If you use Leiningen, add this to your project.clj:
 [kiln "1.0.0"]
 ````
 
-To start with, you must create some "coal". Coals are your base
-values, the ones not computed from other things in the kiln. For a
-webapp, we'll use the request object.
+Kilns fire clays. A clay is a very simple sort of object. Here is one:
 
-````clojure    
-(defcoal request "The request object")
-````
-    
-Don't worry that it's blank. We'll assign a value later.
-    
-So now we can compute stuff from that.
-
-````clojure    
-(defclay uri
-  "The URI of the request"
-  :value (build-uri (?? request)))
-````
-    
-Here we assume you have some function `build-uri` that, when given a
-request object, will compute a URI. Also note the `??` syntax. It will
-automatically lookup the request.
-    
 ````clojure
-(defclay path
-  "The path"
-  :value (.getPath (?? uri)))
+(defclay example)
+    :value 4)
 ````
-    
-Dispatching is one of the first things you do in most frameworks. For
-now, we just dispatch on path.
-    
+
+This clay is somethign with a value of 4. To get its value, we fire it
+in a kiln.
+
 ````clojure
-(defclay dispatch
-  "What do I do?"
-  :value (condp = (?? path)
-           "/remove-user" :remove-user
-           "/add-user" :add-user
-           "/view-user" :view-user))
+(fire (new-kiln) example)
+-> 4
 ````
-    
-Of course, as the application grows, dispatching will get more
-complex. No problem, just make the clay look at more stuff.
-    
-We must match the dispatch to an action. (Ignore the `:glaze` stuff
-for now. We will explain it below.)
-    
+
+Not very exciting. Let's make another clay:
+
 ````clojure
-(declare log)
-(declare security-check)
-(declare db-con)
-(declare user)
-
-(defclay add-user!
-  :glaze [(log :info)
-          security-check]
-  :value (add-user (?? db-con) (?? user)))
-
-(defclay remove-user!
-  :glaze [(log :info)
-          security-check]
-  :value (remove-user (?? db-con) (?? user)))
-
-(defclay action!
-  "Dispatch to the action to perform"
-  :glaze [(log :debug)]
-  :value (condp = (?? dispatch)
-           :remove-user (?? remove-user!)
-           :add-user (?? add-user!)
-           :view-user nil ; no changes!
-           ))
+(defclay another
+    :value (+ 3 (?? example)))
 ````
 
-Here I'm assuming that the functions `add-user` and `remove-user` are
-already defined somewhere.
-    
-Of course we need a database connection.
+We'll fire it:
 
-````clojure    
-(defclay db-con
-  :value (get-db-con)
-  :cleanup (close-db-con ?self))
-````
-
-As above, I assume `get-db-con` and `close-db-con` are functions
-defined somewhere. Also, note that `?self` is the value computed by
-the clay. You can see it during cleanup.
-    
-If you wanted to automatically manage transactioning, try this:
-    
 ````clojure
-(defclay transactioned-db
-  :value (get-transactioned-connection)
-  :cleanup-success (do (commit ?self)
-                       (close-db-con ?self))
-  :cleanup-failure (do (rollback ?self)
-                       (close-db-con ?self)))
+(fire (new-kiln) another)
+-> 7
 ````
-    
-I won't detail `user`, but you can figure it out.
-    
-Let's look at some glaze.
-    
+
+So the `(?? ...)` syntax lets us fire that *other* clay also. When a
+clay is fired in a kiln, it can ask for the value of another clay
+inside that same kiln.
+
+But so what, you ask? Let's make a clay like this:
+
 ````clojure
-(defglaze log
-  "Log an operation"
-  :args [level]
-  :operation (let [clay-name (str (:name ?clay))]
-               (log level (format "Begin %s" clay-name))
-               (let [result (?next)]
-                 (log level (format "Complete %s result: %s"
-                                    clay-name
-                                    (str result)))
-                 result)))
-````
-    
-Here, the `(?next)` call is where the magic happens. It computes and
-returns the value of the enclosed clay. (In reality it may call
-another glaze. They act as a chain.) Notice also that you can access
-the enclosed `?clay`. You can also see its `?args` (not shown).
-
-Here is the `security-check` glaze:
-
-````clojure    
-(defglaze security-check
-  "Throw if user not valid"
-  :operation (if-not (valid-user? (?? user))
-               (throw+ {:type :security-breach!
-                        :user (?? user)
-                        :clay ?clay})
-               (?next)))
+(defclay random
+    :value (rand-int 1000))
 ````
 
-These run as wrappers around the various clays that include them. This
-allows you to factor out common behavior, much as you would with
-aspects or middleware or the like.
-    
-Now we need a view.
-    
+And let's fire it a few times:
+
 ````clojure
-(defclay template
-  :value (condp = (?? dispatch)
-           :remove-user "templates/logon"
-           :add-user "templates/show-user"
-           :view-user "templates/show-user"))
-````
-    
-And so on.
-    
-What does the driver look like? This should work:
-
-````clojure    
-(defn run-kiln
-  [req]
-  (let [kiln (new-kiln)]
-    (stoke-coal kiln request req)
-    (let [result (try
-                   (fire kiln action!) ; do the stuff
-                   (render-template (fire kiln template) ...other kiln data...)
-                   (catch Exception e
-                     (cleanup-kiln-failure kiln)
-                     (throw e)))]
-      (cleanup-kiln-success kiln)
-      result)))
+(fire (new-kiln) random)
+-> 704
+(fire (new-kiln) random)
+-> 671
+(fire (new-kiln) random)
+-> 443
 ````
 
-Here, `(new-kiln)` returns an empty kiln, the `(stoke-coal ...)` sets
-the value of the request (remember we mentioned that above). And the
-`(fire ...)` commands actually compute the values. Since the kiln is
-stateful, calling `(fire kiln template)` will *not* recompute the
-various intermediate values that were already computed when we called
-`(fire kiln action!)`.
-    
-At this point I expect software engineer types will point out that
-some of our clays (namely `dispatch`, `action!`, and `template`) are
-too interdependent.  True. Let's try a minor refactor:
+Looks random enough. But what about this:
 
-````clojure    
-(defclay dispatch-structure
-  :value (condp = (?? path)
-           "/remove-user" {:name :remove-user
-                           :action! add-user!
-                           :template "templates/logon"}
-           "/add-user" {:name :add-user
-                        :action! remove-user!
-                        :template "templates/show-user"}
-           "/view-user" {:name :view-user
-                         :action! nil
-                         :templates "templates/show-user"}))
-
-(defclay dispatch ; we're redefining this
-  :value (:name (?? dispatch-structure)))
-
-(defclay action!
-  :glaze [(log :debug)]
-  :value (when-let [action-clay! (:action! (?? dispatch-structure))]
-           (?? action-clay!)))
-
-(defclay template
-  :value (:template (?? dispatch-structure)))
+````clojure
+(def kiln (new-kiln))
+(fire kiln random)
+-> 226
+(fire kiln random)
+-> 226
+(fire kiln random)
+-> 226
 ````
-    
-Nice, eh?
+
+Within the same kiln, a clay remembers its value.
+
+This is the point of kilns and clays. Within a single kiln, a clay is
+some *particular* value that was computed. Normally, it will be
+computed from the other clays in the kiln. Plus the coals.
+
+A coal is like a clay, except with a coal, you do not compute its
+value in the kiln. Instead, you *set* its value. We call that
+"stoking" the coal.
+
+````clojure
+(defcoal some-coal)
+(defclay some-clay
+    :value (+ 1 (?? some-coal)))
+(defclay another-clay
+    :value (+ (?? some-clay) (?? some-coal)))
+
+(def kiln (new-kiln))
+(stoke-coal kiln some-coal 5)
+(fire kiln another-clay)
+-> 11
+
+(def kiln-2 (new-kiln))
+(stoke-coal kiln-2 some-coal 6)
+(fire kiln-2 another-clay)
+-> 13
+````
+
+Nice, you say, but what is the point?
+
+The point is this: in an application such as a web server, you compute
+a bunch of data for each request, such as the request uri, the request
+cookies, the current user, his session, the dispatch data, the search
+results, the page header, and so on and so on. During that request,
+
+* The data does not change;
+
+* The data is useful in many places;
+
+* But it is difficult to pass around and manage.
+
+Enter clays and kilns. The kiln gathers all this data into one scoped
+mechanism where it is visible but controlled.
+
+For a more detailed example, including how clays cleanup after
+themselves (such as a database connection that knows to close) and how
+clays can be wrapped by *glaze*, which provides features similar to
+middleware/aspects/etc., go [here]
+(http://github.com/straszheimjeffrey/The-Kiln/wiki/Worked_Example).
 
 
 ## Clays with arguments
@@ -270,7 +182,8 @@ kiln a very large number of times with different arguments, all of
 those values (along with the arguments) are stored in the kiln. If you
 must do this, you may be better off with a function.
 
-Glazes can also take arguments. The `log` glaze in the above example
+Glazes can also take arguments. The `log` glaze in the [worked
+example](http://github.com/straszheimjeffrey/The-Kiln/wiki/Worked_Example)
 shows how.
 
 
