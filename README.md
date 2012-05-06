@@ -1,103 +1,19 @@
 # The Kiln
   
-The Kiln is designed to make large complex functions easier to
-write. By "large and complex," I mean things such as web applications,
-where you do not compute a single, simple result for a well-defined
-input, but instead a very complex set of outputs along with
-side-effects.
+The Kiln is an evaluation strategy for insanely complex functions. It
+was designed based on my experience with managing several large,
+complex, ever-changing web applications in Clojure, including with
+tools like Compojure and Ring. Those tool are nice. They are simple
+and well thought out. However, they do little to address the real
+complexities of developing big commercial system.
 
-Consider a standard storefront application. When the user adds an item
-to the cart, the system must do more than just one simple database
-operation, and it must return more than "success." In a real webapp,
-we get steps that look more like this:
+The Kiln can help.
 
-* Check a variety of security parameters
-* Validate the input
-* Perform the update to the database
-* Query the database to get the new cart
-* Iterate through various "user widgets" and update their state, such
-  as ad banners, content for the various side columns, twitter
-  updates, etc.
-* Add any analytics controls to the page
-* Pick a template, render it
-
-And so on. And this only counts the user-visible business logic. A
-complex webapp might also have a variety of logging and monitoring
-code that must be run on each request.
-
-In my experience, the size of such applications seems to grow linearly
-with time, as product managers dream up more features to add and more
-complex ways for them to interact. Such as, they will say, "Hey, now that you've
-added a reward points system, can we hook it into the product
-recommendation system, so that the products with eligible bonuses
-appear higher?"
-
-The list of product demands will go on. The complexity of the
-application will spiral out of control.
-
-Here are some specific complexity issues that I've found:
-
-* For each request, there is a large set of data that needs to be
-  recomputed, such as (perhaps) a user-id, his session, a database
-  connection, validation parameters, logging parameters, search
-  results, other query results, and so on. I've found a few things
-  true about this mass of data:
-    - Most of these items are computed zero or one times for each
-      request.
-    - Often the data you need in one part of the control flow isn't
-      visible because it is created and consumed elsewhere.
-    - What you need to compute tends not to change much, but how you
-      compute it often does. That is, new bits of data become
-      relevant, requiring ever-growing argument lists (or worse, the
-      heavy dependence of dynamic scope).
-
-* The classic problem, "I need this here, but I have to thread it
-  through a dozen functions to get it," becomes legion. Dynamic
-  binding can help, but it creates its own maintenance nightmare.
-
-* Business logic gets mixed up with security, logging, analytics,
-  etc. Aspect oriented programming can help, but creates its own
-  maintenance headaches as a never-ending stream of new "aspect"
-  types gizmos are added to the application to handle the needed
-  control.
-
-* Control flow gets really tricky and non-obvious.
-
-In theory lots of strong engineering vision, constant refactoring, and
-an unearthly level of insight at the start can avoid many of these
-problems. However, in the real world, I've never been that lucky. For
-me, real-world, fast-changing, competitive applications become a big
-ball of mud.
-
-The Kiln is designed to cook up that big ball of mud into something
-manageable. It is built around these principles:
-
-* The key values in the application are represented by top-level
-  objects called "clay".
-
-* Clays themselves are stateless. For each request/invocation/etc.,
-  the value of each clay is computed within a first-class environment,
-  called a "kiln". You can create and destroy kilns at will. (In a
-  webapp, the idea is that you create one kiln per request.)
-
-* Within the kiln, clays are computed lazily.
-
-* Clays know how to cleanup after themselves. If your database
-  connection is a clay, it will get closed at the end of the request.
-
-* No dynamic scope. It will allow you to work with libraries that
-  require dynamic scoping, but no adding your own.
-
-* No aspects. Clays can be wrapped with "glaze", which replaces the
-  needs for aspects. Unlike aspects, glazes are visible where the clay
-  is defined.
-
-* Clays should off-load their computation to normal functions.
-  However, those functions should be as simple as possible, and do
-  exactly one thing. (Let all the crazy, ugly dependencies live in the
-  kiln.)
-
-
+* [Why Use the Kiln]
+  (http://github.com/straszheimjeffrey/The-Kiln/wiki/Why)
+* [A Sample Application]
+  (http://github.com/straszheimjeffrey/The-Kiln/tree/master/sample)
+* Kiln Style Guile (comming soon)
 
 ## Usage
 
@@ -358,42 +274,16 @@ Glazes can also take arguments. The `log` glaze in the above example
 shows how.
 
 
-## Mixing Clays With Transactions
+## Clays and Threads
 
-By default, a clay cannot be evaluated with a dosync block. So code
-like this will not work:
+Each Kiln should only be used within the thread where it was
+created. There is no support for sharing kilns between threads. Note
+this does not apply to clays. Clays are entirely stateless. They can
+be shared. Many threads can create their own kilns, and use them to
+process the same set of clays.
 
-````clojure
-(dosync (fire some-kiln some-clay))
-````
-
-This also will fail:
-
-````clojure
-(defclay some-clay
-  :value (let [value (dosync (?? another-clay))]
-            (something value)))
-````
-
-The reason for this is because the actual firing of the clays, and the
-internal maintainance of the kiln themselves use transactions. If they
-are wrapped within a dosync, there seems a high likelyhood that
-rollbacks will leave clays getting computed multiple times, thus
-causing errors in the side effects. It seems wise to just dissallow it
-by default.
-
-However, there may be times when you simply need a series of clays to
-be transactional. In this case, they can be marked
-`transaction-allowed?`, which will override this behavior.
-
-````clojure
-(defclay some-transactioned-clay
-  :value (do-something (?? another-clay))
-  :transaction-allowed? true)
-````
-
-Now `(dosync (fire some-kiln some-transactioned-clay))` will
-work. Note, however, that another-clay must also be thus defined.
+This, of course, is exactly how they should be used for web
+applications. Each request creates a kiln. They share your clays.
 
 ## License
 
