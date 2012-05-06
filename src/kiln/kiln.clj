@@ -14,7 +14,7 @@
              (^:private is-kiln-cleaning? [self]))
 
 (deftype ^:private kiln
-  [values cleanups currently-cleaning?]
+  [values cleanups]
   kiln-protocol
   (get-item-from-kiln [self id]
     (get @values id ::kiln-item-not-found))
@@ -24,18 +24,19 @@
     (alter cleanups conj item))
   (get-cleanups-from-kiln [self]
     (let [result @cleanups]
-      (ref-set currently-cleaning? true)
-      (ref-set cleanups nil)
-      result))
+      (if (not= result ::currently-cleaning)
+        (do (ref-set cleanups ::currently-cleaning)
+            result)
+        nil)))
   (is-kiln-cleaning? [self]
-    @currently-cleaning?))
+    (= @cleanups ::currently-cleaning)))
 
 (defmacro ^:private kiln-ops [& forms] `(dosync ~@forms))
 
 (defn new-kiln
   "Return a blank kiln ready to stoke and fire."
   []
-  (kiln. (ref {}) (ref nil) (ref false)))
+  (kiln. (ref {}) (ref nil)))
 
 (defn- clay-id
   [clay args]

@@ -372,8 +372,8 @@
 
 (comment
 
-  (run-tests)
+(run-tests)
 
-  )
+)
 
 ;; End of file
