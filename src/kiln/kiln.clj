@@ -75,7 +75,7 @@ clay and the last are considered the clay's arguments."
            (when (has-cleanup? clay)
              (swap! (:needs-cleanup kiln) conj {:clay clay
                                                 :args args}))
-             result)
+           result)
          (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
        (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
 
@@ -94,13 +94,13 @@ clay and the last are considered the clay's arguments."
       (let [clay (:clay clay-map)
             args (:args clay-map)
             funs (keep #(get clay %) keys)]
-        (try
-          (assert (apply clay-fired? kiln clay args))
-          (let [result (apply fire kiln clay args)]
-            (doseq [fun funs]
-              (apply fun kiln result args)))
-          (catch Exception e
-            (swap! exceptions conj e)))))
+        (assert (apply clay-fired? kiln clay args))
+        (let [result (apply fire kiln clay args)]
+          (doseq [fun funs]
+            (try
+              (apply fun kiln result args)
+              (catch Exception e
+                (swap! exceptions conj e)))))))
     @exceptions))
       
 (defn- cleanup-kiln-which
@@ -377,8 +377,5 @@ called with.
   [name & stuff]
   (define-preserving-id name "glaze" stuff))
 
-(comment
-    
-)
 
 ;; End of file

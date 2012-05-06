@@ -8,11 +8,28 @@
   (import java.net.URI))
 
 (defcoal request
-  "The Ring Request Object.")
+  "The Ring Request Object")
 
 (defclay request-method
-  "The request method, :get or :post."
+  "The request method, :get or :post"
   :value (-> request ?? :request-method))
+
+(defclay remote-addr
+  "The remote IP address"
+  :value (-> request ?? :remote-addr))
+
+(defclay scheme
+  "The scheme, such as :http or :https"
+  :value (-> request ?? :scheme))
+
+(defclay headers
+  "The headers, as a map of String -> String. If you pass a single
+String argument, it will return that header."
+  :args [& [which]]
+  :value (let [header-map (-> request ?? :headers)]
+           (if which
+             (get header-map which)
+             header-map)))
 
 (defclay request-uri-as-java-uri
   "The request data as a java uri"
@@ -30,19 +47,19 @@
                  nil)))
 
 (defclay request-uri
-  "The request as a kiln-ring.uri-utils uri."
+  "The request as a kiln-ring.uri-utils uri"
   :value (as-uri (?? request-uri-as-java-uri)))
 
 (defclay params
-  "The params from the request, as set by Ring middleware."
+  "The params from the request, as set by Ring middleware"
   :value (-> request ?? :params))
 
 (defclay cookies
-  "The cookies from the request, as set by Ring middleware."
+  "The cookies from the request, as set by Ring middleware"
   :value (-> request ?? :cookies))
 
 (defclay session
-  "The user session, as set by Ring middleware."
+  "The user session, as set by Ring middleware"
   :value (-> request ?? :session))
 
 
