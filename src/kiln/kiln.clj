@@ -14,12 +14,12 @@
              (^:private is-kiln-cleaning? [self]))
 
 (deftype ^:private kiln
-  [vals cleanups currently-cleaning?]
+  [values cleanups currently-cleaning?]
   kiln-protocol
   (get-item-from-kiln [self id]
-    (get @vals id ::kiln-item-not-found))
+    (get @values id ::kiln-item-not-found))
   (put-item-in-kiln [self id val]
-    (alter vals assoc id val))
+    (alter values assoc id val))
   (add-cleanup-to-kiln [self item]
     (alter cleanups conj item))
   (get-cleanups-from-kiln [self]
