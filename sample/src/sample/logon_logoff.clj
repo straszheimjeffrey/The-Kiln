@@ -2,11 +2,11 @@
     ^{:doc "A module to manage logon and logoff"
       :author "Jeffrey Straszheim"}
   sample.logon-logoff
-  (use sample.utils
-   kiln-ring.request
-       kiln.kiln
+  (use kiln.kiln
        slingshot.slingshot
-       hiccup.core))
+       hiccup.core)
+  (require (sample [utils :as utils])
+           (kiln-ring [request :as request])))
 
 ;; A very stupid and simple logon mechanism. A real app would do real
 ;; things.
@@ -15,13 +15,13 @@
 ;; Here we have some basic clays about the current user.
 
 (defclay logged-on?
-  :value (-> session ?? :user))
+  :value (-> request/session ?? :user))
 
 (defclay current-user-name
-  :value (-> session ?? :user :name))
+  :value (-> request/session ?? :user :name))
 
 (defclay admin-user?
-  :value (-> session ?? :admin?))
+  :value (-> request/session ?? :admin?))
 
 
 ;; These are some glazes you can add to a clay to provide
@@ -31,7 +31,7 @@
   :operation (if (?? logged-on?)
                (?next)
                (throw+ {:type :forced-redirect
-                        :uri (?? logon-uri)})))
+                        :uri (?? utils/logon-uri)})))
 
 (defglaze require-admin
   :operation (if (?? admin-user?)
@@ -45,7 +45,7 @@
 ;; Here we just make sure the name and password match: a very silly
 ;; way to logon. The result is a map, which is used below.
 (defclay logon-action!
-  :value (let [{:keys [name pass]} (?? params)]
+  :value (let [{:keys [name pass]} (?? request/params)]
            {:success? (and name
                            (> (count name) 0)
                            (= name pass))
@@ -66,8 +66,8 @@
 (defclay logon-redirect-uri
   :value (let [logon-stuff (?? logon-action!)]
            (if (:success? logon-stuff)
-             (?? list-messages-uri)
-             (?? failed-logon-uri))))
+             (?? utils/list-messages-uri)
+             (?? utils/failed-logon-uri))))
 
 
 ;; Here is the logon form:
@@ -89,11 +89,11 @@
 
 ;; Return the basic logon form.
 (defclay logon-body
-  :value (logon-body-text (?? logon-uri) nil))
+  :value (logon-body-text (?? utils/logon-uri) nil))
 
 ;; Same, but with an error message.
 (defclay failed-logon-body
-  :value (logon-body-text (?? logon-uri)
+  :value (logon-body-text (?? utils/logon-uri)
                           "Sorry, we do not recognize that name and password"))
 
 
@@ -103,9 +103,9 @@
   :value :none)
 
 (defclay logoff-new-session
-  :value (dissoc (?? session) :user :admin?))
+  :value (dissoc (?? request/session) :user :admin?))
 
 (defclay logoff-redirect-uri
-  :value (?? logon-uri))
+  :value (?? utils/logon-uri))
 
 ;; End of file

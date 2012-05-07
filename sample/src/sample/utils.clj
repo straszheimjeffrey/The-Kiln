@@ -3,8 +3,8 @@
       :author "Jeffrey Straszheim"}
   sample.utils
   (use kiln.kiln
-       kiln-ring.request
-       clojure.tools.logging))
+       clojure.tools.logging)
+  (require (kiln-ring [request :as request])))
 
 
 
@@ -12,7 +12,7 @@
 
 (defclay uri-with-path
   :args [path]
-  :value (-> (?? request-uri)
+  :value (-> (?? request/request-uri)
              (assoc :path path
                     :query nil)))
 

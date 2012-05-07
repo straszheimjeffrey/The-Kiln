@@ -6,7 +6,7 @@
        clojure.tools.logging
        [ring.adapter.jetty :only [run-jetty]]
        [ring.middleware.stacktrace :only [wrap-stacktrace-web]])
-  (require [sample.response :as server])
+  (require (sample [response :as response]))
   (import (org.apache.log4j Logger
                             Level
                             PatternLayout
@@ -55,7 +55,7 @@
   (alter-var-root
    #'server
    (fn [_]
-     (run-jetty (wrap-stacktrace-web server/my-handler)
+     (run-jetty (wrap-stacktrace-web response/handler)
                 {:port port
                  :join? false}))))
 

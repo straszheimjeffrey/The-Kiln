@@ -2,12 +2,14 @@
     ^{:doc "The main dispatcher of the sample server"
       :author "Jeffrey Straszheim"}
   sample.dispatch
-  (use [sample logon-logoff message utils]
-       [kiln-ring request]
-       kiln.kiln
+  (use kiln.kiln
        slingshot.slingshot
        matchure
-       clojure.tools.logging))
+       clojure.tools.logging)
+  (require (sample [logon-logoff :as logon]
+                   [message :as message]
+                   [utils :as utils])
+           (kiln-ring [request :as request])))
 
 
 ;; This is the main dispatch logic for a Kiln-Ring Restful Web
@@ -73,7 +75,7 @@ kiln-ring.uri-utils.uri."
 
 (defclay path-as-seq
   "The path of the request split on /'s, to form a seq."
-  :value (let [path (:uri (?? request))]
+  :value (let [path (:uri (?? request/request))]
            (->> (partition-by #(= % \/) path)
                 (map (partial apply str))
                 (remove #{"/"}))))
@@ -83,7 +85,7 @@ kiln-ring.uri-utils.uri."
 components, such as:
 
   '(:get \"message\" \"54\")"
-  :value (cons (?? request-method)
+  :value (cons (?? request/request-method)
                (?? path-as-seq)))
 
 
@@ -130,9 +132,9 @@ components, such as:
  ;; message list page, depending on if they are logged on.
  [:get] {:response-type :redirect
          :action nil
-         :redirect-uri (if (?? logged-on?)
-                         list-messages-uri
-                         logon-uri)})
+         :redirect-uri (if (?? logon/logged-on?)
+                         utils/list-messages-uri
+                         utils/logon-uri)})
 
 
 ;; Logon and logoff. This is more interesting. Here we have action and
@@ -142,19 +144,19 @@ components, such as:
 (dispatch-clay
  logon-matches
  [:post "logon"] {:response-type :redirect
-                  :action logon-action!
-                  :new-session logon-new-session
-                  :redirect-uri logon-redirect-uri}
+                  :action logon/logon-action!
+                  :new-session logon/logon-new-session
+                  :redirect-uri logon/logon-redirect-uri}
  [:get "logon"] {:response-type :page
                  :title "Login"
-                 :body logon-body}
+                 :body logon/logon-body}
  [:get "failed-logon"] {:response-type :page
                         :title "Login"
-                        :body failed-logon-body}
+                        :body logon/failed-logon-body}
  [:get "logoff"] {:response-type :redirect
-                   :action logoff-action!
-                   :new-session logoff-new-session
-                   :redirect-uri logoff-redirect-uri})
+                   :action logon/logoff-action!
+                   :new-session logon/logoff-new-session
+                   :redirect-uri logon/logoff-redirect-uri})
 
 ;; These return the clays form the sample.message module. Notice how
 ;; we use the ?which syntax from matchure to get the message ID. Also,
@@ -165,24 +167,24 @@ components, such as:
   message-matches
   [:get "list-messages"] {:response-type :page
                           :title "Messages"
-                          :body list-messages-body}
+                          :body message/list-messages-body}
   [:get "show-message" ?which] {:response-type :page
                                 :title "Message"
-                                :body show-message-body
+                                :body message/show-message-body
                                 :message-id which}
   [:get "new-message"] {:response-type :page
                         :title "New Message"
-                        :body new-message-body}
+                        :body message/new-message-body}
   [:get "edit-message" ?which] {:response-type :page
                                 :title "Edit Message"
-                                :body edit-message-body
+                                :body message/edit-message-body
                                 :message-id which}
   [:post "new-message"] {:response-type :redirect
-                         :action new-message-action!
-                         :redirect-uri new-message-redirect-uri}
+                         :action message/new-message-action!
+                         :redirect-uri message/new-message-redirect-uri}
   [:post "edit-message" ?which] {:response-type :redirect
-                                 :action edit-message-action!
-                                 :redirect-uri edit-message-redirect-uri
+                                 :action message/edit-message-action!
+                                 :redirect-uri message/edit-message-redirect-uri
                                  :message-id which})
 
 

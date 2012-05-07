@@ -2,9 +2,7 @@
     ^{:doc "Generates a response for the sample server"
       :author "Jeffrey Straszheim"}
   sample.response
-  (use [sample dispatch logon-logoff utils]
-       [kiln-ring server request]
-       kiln.kiln
+  (use kiln.kiln
        ring.util.response
        ring.util.servlet
        ring.middleware.params
@@ -13,6 +11,11 @@
        slingshot.slingshot
        hiccup.core
        clojure.tools.logging)
+  (require (sample [dispatch :as dispatch]
+                   [logon-logoff :as logon]
+                   [utils :as utils])
+           (kiln-ring [server :as server]
+                      [request :as request]))
   (:gen-class))
 
 
@@ -31,14 +34,14 @@
 ;; point of our code.
 (defclay response-clay
   "The main Ring response."
-  :glaze [(log-glaze :info)]
+  :glaze [(utils/log-glaze :info)]
   
   :value (do
 
            ;; This is the start, so let's log something. (Note how I
            ;; use the -> with the ??. Arrows rule!)
            (info (format "Begin Request: %s"
-                         (-> request-uri ?? str)))
+                         (-> request/request-uri ?? str)))
            
            (try+
             
@@ -48,14 +51,14 @@
             ;; determine which by inspecting the response-type
             ;; clay. Depending on which we have, we get the result
             ;; from a different clay.
-            (let [response (condp = (?? response-type)
+            (let [response (condp = (?? dispatch/response-type)
                              :page (response (?? page-to-show))
                              :redirect (?? redirect-response)
                              :not-found (not-found "Page not found"))]
 
               ;; We may need to update the session. If so, it will be
               ;; in the new-session clay.
-              (if-let [new-session (?? new-session)]
+              (if-let [new-session (?? dispatch/new-session)]
                 (assoc response :session new-session)
                 response))
             
@@ -75,9 +78,9 @@
 ;; the clojure -> operator to call a clay. I do that a lot. Arrows
 ;; rule!
 (defclay redirect-response
-  :value (do (when-let [action-to-run! (?? action!)]
+  :value (do (when-let [action-to-run! (?? dispatch/action!)]
                (?? action-to-run!))
-             (redirect-after-post (-> redirect-uri ?? str))))
+             (redirect-after-post (-> dispatch/redirect-uri ?? str))))
 
 (declare page-header page-footer stylesheet)
 
@@ -91,12 +94,12 @@
   :value (html
           [:html
            [:head
-            [:title (-> page-title ?? h)]
+            [:title (-> dispatch/page-title ?? h)]
             [:style {:type "text/css"}
              (?? stylesheet)]]
            [:body
             (?? page-header)
-            [:div#main (?? page-body)]
+            [:div#main (?? dispatch/page-body)]
             (?? page-footer)]]))
 
 ;; The header is really simple.
@@ -104,7 +107,7 @@
   "The page header"
   :value (html
           [:div#header
-           [:h1 (-> page-title ?? h)]]))
+           [:h1 (-> dispatch/page-title ?? h)]]))
 
 
 ;; The footer is a bit more complex. It adds links. The application
@@ -116,11 +119,11 @@
   :value (html
           [:div#footer
            [:p
-            [:a {:href (-> root-uri ?? str)} "(home)"]
+            [:a {:href (-> utils/root-uri ?? str)} "(home)"]
             " "
-            (if (?? logged-on?)
-              [:a {:href (-> logoff-uri ?? str)} "(logoff)"]
-              [:a {:href (-> logon-uri ?? str)} "(logon)"])]]))
+            (if (?? logon/logged-on?)
+              [:a {:href (-> utils/logoff-uri ?? str)} "(logoff)"]
+              [:a {:href (-> utils/logon-uri ?? str)} "(logon)"])]]))
 
 ;; The stylesheet. What a boring clay!
 (defclay stylesheet
@@ -192,14 +195,14 @@ li {margin: 0.2in 0in;
     ;; Go boom for a Throwable
     (throw exc)))
             
-(apply-kiln-handler response-clay
-                    :on-error on-error
-                    :middleware [wrap-keyword-params
-                                 wrap-params
-                                 wrap-session])
+(server/apply-kiln-handler response-clay
+                           :on-error on-error
+                           :middleware [wrap-keyword-params
+                                        wrap-params
+                                        wrap-session])
 
-(def my-handler handler)
-(servlet my-handler)
+(def handler server/handler)
+(servlet handler)
 
 
 
