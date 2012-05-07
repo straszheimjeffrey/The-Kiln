@@ -172,7 +172,6 @@ clay and the last are considered the clay's arguments."
   [form]
   (->> form
        (tree-seq coll? seq)
-       (remove coll?)
        (filter symbol?)
        (remove #(= '& %))))
 
