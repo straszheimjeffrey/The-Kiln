@@ -170,13 +170,11 @@ clay and the last are considered the clay's arguments."
 (defn- all-symbols
   "Walks into a binding form and find everything that might be a var"
   [form]
-  (cond
-   (= form '&) nil
-   (symbol? form) #{form}
-   (vector? form) (reduce union (map all-symbols form))
-   (map? form) (reduce union (concat (map all-symbols (vals form))
-                                     (map all-symbols (keys form))))
-   :otherwise nil))
+  (->> form
+       (tree-seq coll? seq)
+       (remove coll?)
+       (filter symbol?)
+       (remove #(= '& %))))
 
 (defn- wrap-glazes
   [glazes value kiln-sym args]
