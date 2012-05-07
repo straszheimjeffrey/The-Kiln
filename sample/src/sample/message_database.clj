@@ -38,7 +38,7 @@
 
 (defn- new-key
   []
-  (let [current-keys (-> @store :index keys set)]
+  (let [current-keys (->> @store :messages (map :key) set)]
     (loop [attempted-key (str (rand-int 100000))]
       (if (current-keys attempted-key)
         (recur (str (rand-int 100000)))
