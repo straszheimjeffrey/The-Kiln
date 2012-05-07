@@ -3,4 +3,7 @@
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [kiln "1.1.1"]
                  [ring "1.1.0"]]
-  :dev-dependencies [[swank-clojure "1.3.3"]])
+  :min-lein-version "1.6.0"
+  :local-repo-classpath true)
+
+;; End of file

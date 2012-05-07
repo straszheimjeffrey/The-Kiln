@@ -9,7 +9,7 @@
                                              javax.jms/jms
                                              com.sun.jdmk/jmxtools
                                              com.sun.jmx/jmxri]]]
-  :dev-dependencies [[swank-clojure "1.3.3"]]
+  :min-lein-version "1.6.0"
   :aot [#".*"]
   :ring {:handler sample.response/handler})
 
