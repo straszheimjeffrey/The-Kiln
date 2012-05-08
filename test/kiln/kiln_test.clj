@@ -3,20 +3,15 @@
   (use slingshot.slingshot)
   (use kiln.kiln))
 
-(def ^{:macro true} ko @#'kiln.kiln/kiln-ops)
-
 (deftest test-new-kiln
   (let [k (new-kiln)]
-    (ko
-     (#'kiln.kiln/put-item-in-kiln k :fred :first)
-     (#'kiln.kiln/put-item-in-kiln k :mary :second))
-    (ko
-     (#'kiln.kiln/add-cleanup-to-kiln k :a-cleanup)
-     (#'kiln.kiln/put-item-in-kiln k :fred :third)
-     (is (= (#'kiln.kiln/get-item-from-kiln k :fred)
-            :third)))
-    (ko
-     (#'kiln.kiln/add-cleanup-to-kiln k :another-cleanup))
+    (#'kiln.kiln/put-item-in-kiln k :fred :first)
+    (#'kiln.kiln/put-item-in-kiln k :mary :second)
+    (#'kiln.kiln/add-cleanup-to-kiln k :a-cleanup)
+    (#'kiln.kiln/put-item-in-kiln k :fred :third)
+    (is (= (#'kiln.kiln/get-item-from-kiln k :fred)
+           :third))
+    (#'kiln.kiln/add-cleanup-to-kiln k :another-cleanup)
     (is (= (#'kiln.kiln/get-item-from-kiln k :fred)
            :third))
     (is (= (#'kiln.kiln/get-item-from-kiln k :mary)
@@ -24,12 +19,10 @@
     (is (= (#'kiln.kiln/get-item-from-kiln k :bleh)
            :kiln.kiln/kiln-item-not-found))
     (is (not (#'kiln.kiln/is-kiln-cleaning? k)))
-    (ko
-     (is (= (#'kiln.kiln/get-cleanups-from-kiln k)
-            '(:another-cleanup :a-cleanup)))
-     (is (#'kiln.kiln/is-kiln-cleaning? k)))
-    (ko
-     (is (nil? (#'kiln.kiln/get-cleanups-from-kiln k))))))
+    (is (= (#'kiln.kiln/get-cleanups-from-kiln k)
+           '(:another-cleanup :a-cleanup)))
+    (is (#'kiln.kiln/is-kiln-cleaning? k))
+    (is (nil? (#'kiln.kiln/get-cleanups-from-kiln k)))))
 
 ;; Some basic coals
 

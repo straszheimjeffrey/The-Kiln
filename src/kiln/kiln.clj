@@ -6,6 +6,21 @@
        [clojure.set :only [union]])
   (require [clojure.walk :as walk]))
 
+(defmacro ^:private kiln-error
+  "Builds a nice slingshot error message."
+  [type message & more]
+  (let [symbs (-> &env keys set)
+        more (concat more
+                     (when (symbs 'clay)
+                       `(:clay ~'clay))
+                     (when (symbs 'coal)
+                       `(:coal ~'coal))
+                     (when (symbs 'glaze)
+                       `(:glaze ~'glaze))
+                     (when (symbs 'kiln)
+                       `(:kiln ~'kiln)))]
+    `(throw+ (hash-map :type ~type :message ~message ~@more))))
+
 (defprotocol ^:private kiln-protocol
              (^:private get-item-from-kiln [self id])
              (^:private put-item-in-kiln [self id val])
@@ -13,30 +28,28 @@
              (^:private get-cleanups-from-kiln [self])
              (^:private is-kiln-cleaning? [self]))
 
-(deftype ^:private kiln
+(deftype ^:private ref-kiln
   [values cleanups]
   kiln-protocol
   (get-item-from-kiln [self id]
     (get @values id ::kiln-item-not-found))
   (put-item-in-kiln [self id val]
-    (alter values assoc id val))
+    (dosync (alter values assoc id val)))
   (add-cleanup-to-kiln [self item]
-    (alter cleanups conj item))
+    (dosync (alter cleanups conj item)))
   (get-cleanups-from-kiln [self]
-    (let [result @cleanups]
-      (if (not= result ::currently-cleaning)
-        (do (ref-set cleanups ::currently-cleaning)
-            result)
-        nil)))
+    (dosync (let [result @cleanups]
+              (if (not= result ::currently-cleaning)
+                (do (ref-set cleanups ::currently-cleaning)
+                    result)
+                nil))))
   (is-kiln-cleaning? [self]
     (= @cleanups ::currently-cleaning)))
-
-(defmacro ^:private kiln-ops [& forms] `(dosync ~@forms))
 
 (defn new-kiln
   "Return a blank kiln ready to stoke and fire."
   []
-  (kiln. (ref {}) (ref nil)))
+  (ref-kiln. (ref {}) (ref nil)))
 
 (defn- clay-id
   [clay args]
@@ -46,7 +59,7 @@
   "Within the kiln, set the coal to the desired value."
   [^kiln.kiln.kiln_protocol kiln coal val]
   {:pre [(::coal? coal)]}
-  (kiln-ops (put-item-in-kiln kiln (clay-id coal nil) val)))
+  (put-item-in-kiln kiln (clay-id coal nil) val))
 
 (defn unsafe-set-clay!!
   "This will set the value of a clay within the kiln without
@@ -57,7 +70,7 @@ clay and the last are considered the clay's arguments."
   {:pre [(::clay? clay)]}
   (let [val (last args-and-val)
         args (butlast args-and-val)]
-    (kiln-ops (put-item-in-kiln kiln (clay-id clay args) val))))
+    (put-item-in-kiln kiln (clay-id clay args) val)))
 
 (defn- has-cleanup?  [clay]
   (or (:cleanup clay)
@@ -72,32 +85,32 @@ clay and the last are considered the clay's arguments."
         value (get-item-from-kiln kiln id)]
     (cond
      (= value ::running) ; uh-oh, we have a loop.
-     (throw+ {:type :kiln-loop :clay clay :kiln kiln})
+     (kiln-error :kiln-loop "Cyclic Dependency in Kiln")
 
      (= value ::clay-had-error)
-     (throw+ {:type :kiln-clay-had-error :clay clay :kiln kiln})
+     (kiln-error :kiln-clay-had-error "Attempted to evaluate clay that already threw")
 
      (not= value ::kiln-item-not-found) ; yay! it's there!
      value
 
      :otherwise ; gotta get it.
-     (if-not (is-kiln-cleaning? kiln)
-       (if (::clay? clay)
+     (do (when (is-kiln-cleaning? kiln)
+           (kiln-error :kiln-uncomputed-during-cleanup
+                       "Attempted to fire unevaluated clay during cleanup"))
+         (when-not (::clay? clay)
+           (kiln-error :kiln-absent-coal
+                       "Attempted to fire unstoked coal"))
          ;; compute and store result
          (let [result (try
-                        (kiln-ops (put-item-in-kiln kiln id ::running))
+                        (put-item-in-kiln kiln id ::running)
                         ((:fun clay) kiln clay args)
                         (catch Throwable e
-                          (kiln-ops
-                           (put-item-in-kiln kiln id ::clay-had-error))
+                          (put-item-in-kiln kiln id ::clay-had-error)
                           (throw e)))]
-           (kiln-ops
-            (put-item-in-kiln kiln id result)
-            (when (has-cleanup? clay)
-              (add-cleanup-to-kiln kiln [clay args])))
-           result)
-         (throw+ {:type :kiln-absent-coal :coal clay :kiln kiln}))
-       (throw+ {:type :kiln-uncomputed-during-cleanup :clay clay :kiln kiln})))))
+           (put-item-in-kiln kiln id result)
+           (when (has-cleanup? clay)
+             (add-cleanup-to-kiln kiln [clay args]))
+           result)))))
 
 (defn clay-fired?
   "Has this clay been fired?"
@@ -109,7 +122,7 @@ clay and the last are considered the clay's arguments."
 (defn- cleanup
   [^kiln.kiln.kiln_protocol kiln keys]
   (let [exceptions (ref [])]
-    (doseq [[clay args] (kiln-ops (get-cleanups-from-kiln kiln))]
+    (doseq [[clay args] (get-cleanups-from-kiln kiln)]
       (let [funs (keep #(get clay %) keys)]
         (assert (apply clay-fired? kiln clay args))
         (let [result (apply fire kiln clay args)]
@@ -124,9 +137,9 @@ clay and the last are considered the clay's arguments."
   [kiln which]
   (let [exceptions (cleanup kiln [:cleanup which])]
     (if-not (empty? exceptions)
-      (throw+ {:type :kiln-cleanup-exception
-               :kiln kiln
-               :exceptions exceptions}))))
+      (kiln-error :kiln-cleanup-exception
+                  "Nested exceptions threw in kiln cleanup"
+                  :exceptions exceptions))))
 
 (defn cleanup-kiln-success
   "Run the cleanup and cleanup-success routines for each needed
@@ -279,7 +292,9 @@ glaze first and the arguments following, like this:
                      (assoc data key (list 'quote symb))))
         id (or (:id data-map) (gensym "clay-"))]
     (when-let [bads (bad-keys data-map allowed-clay-kws)]
-      (throw+ {:type :kiln-bad-key :keys bads :clay clay}))
+      (kiln-error :kiln-bad-key
+                  (format "Illegal key in clay constructor: %s" (pr-str bads))
+                  :keys bads))
     (-> data-map
         (assoc :args (list 'quote args))
         (set-symb :id id)
@@ -300,7 +315,9 @@ glaze first and the arguments following, like this:
   (let [data-map (apply hash-map coal)
         id (or (:id data-map) (gensym "coal-"))]
     (when-let [bads (bad-keys data-map allowed-coal-kws)]
-      (throw+ {:type :kiln-bad-key :keys bads :coal coal}))
+      (kiln-error :kiln-bad-key
+                  (format "Illegal key in coal construction: %s" (pr-str bads))
+                  :keys bads))
     {::coal? true
      :id (list 'quote id)
      :name (list 'quote (or (:name data-map) id))}))
@@ -348,7 +365,9 @@ called with.
         name (or (:name data-map) id)
         kiln-sym (or (:kiln data-map) (gensym "kiln"))]
     (when-let [bads (bad-keys data-map allowed-glaze-kws)]
-      (throw+ {:type :kiln-bad-key :keys bads :glaze glaze}))
+      (kiln-error :kiln-bad-key
+                  (format "Illegal key in glaze construction: %s" (pr-str bads))
+                  :keys bads))
     {::glaze? true
      :args (list 'quote args)
      :id (list 'quote id)
