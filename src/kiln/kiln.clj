@@ -1,5 +1,5 @@
 (ns
-    ^{:doc "A new evaluation strategy for complex computations."
+    ^{:doc "A computational model for insanely complex functions."
       :author "Jeffrey Straszheim"}
   kiln.kiln
   (use slingshot.slingshot
