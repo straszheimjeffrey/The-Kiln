@@ -373,6 +373,22 @@
     (cleanup-kiln-success k)
     (is (= @store [:b]))))
 
+(defkilntest test-clays-not-run-in-transaction
+  (let [k (new-kiln)
+        a (coal)
+        b (clay :name :b
+                :value (io! (?? a)))
+        c (glaze :name c
+                 :operation (io! (?next)))
+        d (clay :name d
+                :glaze [c]
+                :value (io! (+ (?? a) (?? b))))]
+        (stoke-coal k a 1)
+        (is (= (fire k b)
+               1))
+        (is (= (fire k d)
+               2))))
+
 (comment
 
 (run-tests)
