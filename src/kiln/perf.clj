@@ -8,14 +8,16 @@
   :value a)
 
 (defn run-it
-  [count]
-  (let [k (new-kiln)]
+  [count which]
+  (let [k (new-kiln which)]
     (dotimes [i count]
       (fire k do-not-much i))
     (dotimes [i count]
       (fire k do-not-much i))))
-      
-(time (run-it 10000))      
+
+(defn run-test
+  [which]
+  (time (run-it 10000 which)))
 
 
 ;; End of file

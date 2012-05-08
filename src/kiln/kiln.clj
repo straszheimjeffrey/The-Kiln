@@ -46,10 +46,36 @@
   (is-kiln-cleaning? [self]
     (= @cleanups ::currently-cleaning)))
 
+(deftype ^:private atom-kiln
+  [values cleanups]
+  kiln-protocol
+  (get-item-from-kiln [self id]
+    (get @values id ::kiln-item-not-found))
+  (put-item-in-kiln [self id val]
+    (swap! values assoc id val))
+  (add-cleanup-to-kiln [self item]
+    (swap! cleanups conj item))
+  (get-cleanups-from-kiln [self]
+    (let [result @cleanups]
+      (if (not= result ::currently-cleaning)
+        (do (reset! cleanups ::currently-cleaning)
+            result)
+        nil)))
+  (is-kiln-cleaning? [self]
+    (= @cleanups ::currently-cleaning)))
+
 (defn new-kiln
-  "Return a blank kiln ready to stoke and fire."
-  []
-  (ref-kiln. (ref {}) (ref nil)))
+  "Return a blank kiln ready to stoke and fire. Can be passed a single
+argument, kiln-type. The allowed values are :ref and :atom. Defaults
+to ref. (The default may change in a future point release.) This
+determines what locking mechanism the underlying kiln will use. Note
+that kilns are *not* threadsafe, regardless of the chosen model. The
+difference is in how the kiln behaves when fired *within* a dosync
+block. A ref kiln will rollback. An atom kiln will not."
+  [& [kiln-type]]
+  (condp = (or kiln-type :ref)
+    :ref (ref-kiln. (ref {}) (ref nil))
+    :atom (atom-kiln. (atom {}) (atom nil))))
 
 (defn- clay-id
   [clay args]
