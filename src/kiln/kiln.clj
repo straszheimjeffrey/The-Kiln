@@ -2,9 +2,7 @@
     ^{:doc "A computational model for insanely complex functions."
       :author "Jeffrey Straszheim"}
   kiln.kiln
-  (use slingshot.slingshot
-       [clojure.set :only [union]])
-  (require [clojure.walk :as walk]))
+  (use slingshot.slingshot))
 
 (defmacro ^:private kiln-error
   "Builds a nice slingshot error message."
