@@ -7,14 +7,14 @@
   [name & forms]
   `(do
      (deftest ~(symbol (str name "-ref"))
-       (let [~'new-kiln-which #(new-kiln :ref)]
+       (let [~'new-kiln- #(new-kiln :ref)]
          ~@forms))
      (deftest ~(symbol (str name "-atom"))
-       (let [~'new-kiln-which #(new-kiln :atom)]
+       (let [~'new-kiln- #(new-kiln :atom)]
          ~@forms))))
 
 (defkilntest test-new-kiln
-  (let [k (new-kiln-which)]
+  (let [k (new-kiln)]
     (#'kiln.kiln/put-item-in-kiln k :fred :first)
     (#'kiln.kiln/put-item-in-kiln k :mary :second)
     (#'kiln.kiln/add-cleanup-to-kiln k :a-cleanup)
@@ -60,7 +60,7 @@
 ;; A very basic test
 
 (defkilntest basic-kiln-test
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])]
     (stoke-coal k coal-1 1)
     (stoke-coal k coal-2 store)
@@ -78,8 +78,8 @@
     (is (= @store []))))
 
 (defkilntest test-cleanups
-  (let [k1 (new-kiln-which)
-        k2 (new-kiln-which)
+  (let [k1 (new-kiln)
+        k2 (new-kiln)
         store (atom [])
         one (clay :cleanup (swap! (?? coal-2) conj 1)
                   :value :fred)
@@ -102,7 +102,7 @@
     (is (= @store [3 1]))))
 
 (defkilntest test-cleanup-self
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         fred (clay :value 55
                    :cleanup (swap! (?? coal-2) conj (+ ?self 10)))]
@@ -112,7 +112,7 @@
     (is (= @store [65]))))
 
 (defkilntest test-cleanup-exceptions
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (coal)
         b (clay :value (+ (?? a) 5)
@@ -128,7 +128,7 @@
               (map (fn [e] (-> e .getData :object :value)) exceptions)))))))
 
 (defkilntest test-cleanup-order
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         cleanup-order (atom [])
         cleaning! #(swap! cleanup-order conj %)
         a (coal)
@@ -143,7 +143,7 @@
         "cleanup should have happened in the reverse order of firing")))
 
 (defkilntest test-cleanup-after-firing-error
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         cleaned? (atom 0)
         external-rs (clay :value 42 :cleanup (swap! cleaned? inc))
         internal-rs (clay :value (do (?? external-rs) (throw+ ::whatever))
@@ -155,7 +155,7 @@
         "cleaned external-rs once, but never internal-rs")))
 
 (defkilntest test-repeated-cleanup
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (clay :name a
                 :value :a
@@ -181,7 +181,7 @@
     (is (= yyy-id (:id yyy)))))
 
 (defkilntest test-anaphoric-kiln
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         bob! (clay :kiln qqq
                    :value (swap! (?? coal-2) conj qqq))]
@@ -195,7 +195,7 @@
 (defclay embrace :value (?? deadly))
 
 (defkilntest test-loopy-clay
-  (let [k (new-kiln-which)]
+  (let [k (new-kiln)]
     (is (= :exception-thrown
            (try+
             (fire k loopy-clay)
@@ -208,7 +208,7 @@
         "detects mutual, as well as self-recursion")))
 
 (defkilntest basic-glaze-test
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (coal)
         b (glaze :name b
@@ -234,7 +234,7 @@
 
 
 (defkilntest basic-arguments-test
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (coal)
         b (glaze :name b
@@ -258,7 +258,7 @@
     (is (= @store [22 10 11 6 2 3]))))
 
 (defkilntest advanced-arguments-tests
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (coal)
         b (glaze :name b
@@ -290,7 +290,7 @@
                    [6 2 3]]))))
 
 (defkilntest destructuring-argument-tests
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         aa (clay :name aa
                  :args [& args]
@@ -319,7 +319,7 @@
             [5 6 4 {'a 5 'b 6}]]))))
 
 (defkilntest calling-??-in-glaze
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (coal)
         b (coal)
@@ -341,7 +341,7 @@
     (is (= @store [5 3]))))
 
 (defkilntest exceptions-unwrap-correctly
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         a (clay :name a
                 :value (throw+ {:type :exc}))]
     (is (= :exception-thrown)
@@ -354,7 +354,7 @@
            (#'kiln.kiln/get-item-from-kiln k (#'kiln.kiln/clay-id a nil))))))
 
 (defkilntest test-unsafe-set-clay!!
-  (let [k (new-kiln-which)
+  (let [k (new-kiln)
         store (atom [])
         a (clay :name a
                 :value :fred
