@@ -15,9 +15,13 @@
     (dotimes [i count]
       (fire k do-not-much i))))
 
-(defn run-test
+(defn run-long-test
   [which]
-  (time (run-it 10000 which)))
+  (time (run-it 100000 which)))
+
+(defn run-short-test
+  [which]
+  (time (run-it 1000 which)))
 
 
 ;; End of file
