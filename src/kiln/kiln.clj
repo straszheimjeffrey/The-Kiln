@@ -288,6 +288,7 @@ glaze first and the arguments following, like this:
         (assoc :fun fun)
         (dissoc :value)
         (dissoc :glaze)
+        (dissoc :kiln)
         (build-cleanup :cleanup)
         (build-cleanup :cleanup-success)
         (build-cleanup :cleanup-failure))))

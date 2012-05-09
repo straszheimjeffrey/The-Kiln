@@ -1,6 +1,6 @@
-(defproject kiln/kiln-ring "1.1.1"
+(defproject kiln/kiln-ring "1.1.2"
   :description "A Small Adapter to link Kiln with the Ring."
   :dependencies [[org.clojure/clojure "1.3.0"]
-                 [kiln "1.1.1"]
+                 [kiln "1.1.2"]
                  [ring "1.1.0"]]
   :dev-dependencies [[swank-clojure "1.3.3"]])

@@ -180,8 +180,8 @@
 (deftest test-anaphoric-kiln
   (let [k (new-kiln)
         store (atom [])
-        bob! (clay :kiln qqq
-                   :value (swap! (?? coal-2) conj qqq))]
+        bob! (clay :kiln zxqy
+                   :value (swap! (?? coal-2) conj zxqy))]
     (stoke-coal k coal-2 store)
     (fire k bob!)
     (is (= @store [k]))))
