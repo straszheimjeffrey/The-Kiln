@@ -183,8 +183,8 @@
 (defkilntest test-anaphoric-kiln
   (let [k (new-kiln)
         store (atom [])
-        bob! (clay :kiln qqq
-                   :value (swap! (?? coal-2) conj qqq))]
+        bob! (clay :kiln zqyz
+                   :value (swap! (?? coal-2) conj zqyz))]
     (stoke-coal k coal-2 store)
     (fire k bob!)
     (is (= @store [k]))))

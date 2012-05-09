@@ -84,6 +84,15 @@
   (is (= (handler {:a :request})
          :blowed-up))
   (is (= @store ["Boom" :nice-failure])))
+
+(deftest test-kiln-type
+  (let [magic-clay (clay :name a
+                         :kiln kiln
+                         :value kiln)]
+    (apply-kiln-handler magic-clay :kiln-type :ref)
+    (is (instance? String (handler :request)))
+    (apply-kiln-handler magic-clay :kiln-type :atom)
+    (is (instance String (handler :request)))))
     
 
 
