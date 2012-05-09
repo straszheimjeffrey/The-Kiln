@@ -89,10 +89,12 @@
   (let [magic-clay (clay :name a
                          :kiln kiln
                          :value kiln)]
+    (apply-kiln-handler magic-clay)
+    (is (instance? kiln.kiln.ref-kiln (handler :request)))
     (apply-kiln-handler magic-clay :kiln-type :ref)
-    (is (instance? String (handler :request)))
+    (is (instance? kiln.kiln.ref-kiln (handler :request)))
     (apply-kiln-handler magic-clay :kiln-type :atom)
-    (is (instance String (handler :request)))))
+    (is (instance? kiln.kiln.atom-kiln (handler :request)))))
     
 
 
