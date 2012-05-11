@@ -388,8 +388,51 @@
            1))
     (is (= (fire k d)
            2))))
-    
 
+(defkilntest test-fresh-lexical-clays
+  (let [k (new-kiln)
+        make-coal (fn [] (coal))
+        make-clay (fn [d] (clay :value (+ (?? d) 1)))
+        coal-1 (make-coal)
+        coal-2 (make-coal)
+        clay-1 (make-clay coal-1)
+        clay-2 (make-clay coal-2)
+        clay-3 (make-clay clay-1)
+        clay-4 (make-clay clay-2)]
+    (stoke-coal k coal-1 1)
+    (stoke-coal k coal-2 2)
+    (is (= (fire k clay-3)
+           3))
+    (is (= (fire k clay-4)
+           4))))
+
+(defkilntest test-names
+  (defclay a-clay :value 1)
+  (defcoal a-coal)
+  (defglaze a-glaze :operation (?next))
+  (is (= (:name a-clay) 'kiln.kiln-test/a-clay))
+  (is (= (:name a-coal) 'kiln.kiln-test/a-coal))
+  (is (= (:name a-glaze) 'kiln.kiln-test/a-glaze))
+  (let [another-clay (clay :value 1 :name fred)
+        another-coal (coal :name mary)
+        another-glaze (glaze :operation (?next) :name sue)]
+    (is (= (:name another-clay) 'fred))
+    (is (= (:name another-coal) 'mary))
+    (is (= (:name another-glaze) 'sue))))
+
+(defkilntest test-extra
+  (let [bob :mary
+        sally 'jill
+        check (fn [o]
+                (is (= (-> o :extra :bob) :mary))
+                (is (= (-> o :extra :sally) 'jill)))]
+    (defclay a-clay :value 1 :extra {:bob bob :sally sally})
+    (defcoal a-coal :extra {:bob bob :sally sally})
+    (defglaze a-glaze :operation (?next) :extra {:bob bob :sally sally})
+    (check a-clay)
+    (check a-coal)
+    (check a-glaze)))
+    
 (comment
 
 (run-tests)

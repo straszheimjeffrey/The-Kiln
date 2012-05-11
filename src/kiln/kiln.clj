@@ -193,6 +193,13 @@ clay and the last are considered the clay's arguments."
   (let [result (filter (comp not allowed-fn) (keys map))]
     (if (empty? result) nil result)))
 
+(defn- wrap-with-name-and-id
+  [clay name-sym id-sym type]
+  (let [id-var (gensym "id")]
+    `(let [~id-var ~(if id-sym `(quote ~id-sym) `(gensym ~type))
+           name-sym# ~(if name-sym `(quote ~name-sym) id-var)]
+       (assoc ~clay :id ~id-var :name name-sym#))))
+
 (defn- wrap-fires
   [kiln-sym form]
   `(letfn [(~'?? [clay# & args#] (apply fire ~kiln-sym clay# args#))]
@@ -301,53 +308,49 @@ glaze first and the arguments following, like this:
   (let [data-map (apply hash-map clay)
         kiln-sym (or (:kiln data-map) (gensym "kiln"))
         args (or (:args data-map) [])
-        build-cleanup (fn [data key]
-                        (if-let [form (get data key)]
-                          (assoc data key (build-env-fun form
-                                                         kiln-sym
-                                                         (cons '?self args)))
-                          data))
+        build-cleanup (fn [key]
+                        (if-let [form (get data-map key)]
+                          (build-env-fun form
+                                         kiln-sym
+                                         (cons '?self args))
+                          nil))
         fun (wrap-glazes (-> data-map :glaze reverse)
                          (:value data-map)
                          kiln-sym
-                         args)
-        set-symb (fn [data key val]
-                   (let [symb (or (get data key) val)]
-                     (assoc data key (list 'quote symb))))
-        id (or (:id data-map) (gensym "clay-"))]
+                         args)]
     (when-let [bads (bad-keys data-map allowed-clay-kws)]
       (kiln-error :kiln-bad-key
                   (format "Illegal key in clay constructor: %s" (pr-str bads))
                   :keys bads))
-    (-> data-map
-        (assoc :args (list 'quote args))
-        (set-symb :id id)
-        (set-symb :name id)
-        (assoc ::clay? true)
-        (assoc :fun fun)
-        (dissoc :value)
-        (dissoc :glaze)
-        (dissoc :kiln)
-        (build-cleanup :cleanup)
-        (build-cleanup :cleanup-success)
-        (build-cleanup :cleanup-failure))))
+    (wrap-with-name-and-id
+      {::clay? true
+       :args (list 'quote args)
+       :fun fun
+       :cleanup (build-cleanup :cleanup)
+       :cleanup-success (build-cleanup :cleanup-success)
+       :cleanup-failure (build-cleanup :cleanup-failure)
+       :extra (:extra data-map)}
+      (:name data-map)
+      (:id data-map)
+      "clay")))
 
-(def ^:private allowed-coal-kws #{:id :name})
+(def ^:private allowed-coal-kws #{:id :name :extra})
 
 (defmacro coal
   "Build a coal."
   [& coal]
-  (let [data-map (apply hash-map coal)
-        id (or (:id data-map) (gensym "coal-"))]
+  (let [data-map (apply hash-map coal)]
     (when-let [bads (bad-keys data-map allowed-coal-kws)]
       (kiln-error :kiln-bad-key
                   (format "Illegal key in coal construction: %s" (pr-str bads))
                   :keys bads))
-    {::coal? true
-     :id (list 'quote id)
-     :name (list 'quote (or (:name data-map) id))}))
+    (wrap-with-name-and-id
+      {::coal? true
+       :extra (:extra data-map)}
+      (:name data-map)
+      (:id data-map) "coal")))
 
-(def ^:private allowed-glaze-kws #{:id :name :kiln :operation :args})
+(def ^:private allowed-glaze-kws #{:id :name :kiln :operation :args :extra})
 
 (defmacro glaze
   "Build a glaze. See the docstring of clay for the basic
@@ -360,6 +363,8 @@ principles. Glazes allow the following to be defined:
 :kiln - as clay
 
 :args - as clay
+
+:extra - as clay
 
 :operation - This stands in place of the clay :value. Inside, the
 
@@ -386,20 +391,21 @@ called with.
   [& glaze]
   (let [data-map (apply hash-map glaze)
         args (or (:args data-map) [])
-        id (or (:id data-map) (gensym "glaze-"))
-        name (or (:name data-map) id)
         kiln-sym (or (:kiln data-map) (gensym "kiln"))]
     (when-let [bads (bad-keys data-map allowed-glaze-kws)]
       (kiln-error :kiln-bad-key
                   (format "Illegal key in glaze construction: %s" (pr-str bads))
                   :keys bads))
-    {::glaze? true
-     :args (list 'quote args)
-     :id (list 'quote id)
-     :name (list 'quote name)
-     :operation (build-env-fun (:operation data-map)
-                               kiln-sym
-                               (concat ['?clay '?next '?args] args))}))
+    (wrap-with-name-and-id
+      {::glaze? true
+       :args (list 'quote args)
+       :operation (build-env-fun (:operation data-map)
+                                 kiln-sym
+                                 (concat ['?clay '?next '?args] args))
+       :extra (:extra data-map)}
+      (:name data-map)
+      (:id data-map)
+      "glaze")))
 
 
 
