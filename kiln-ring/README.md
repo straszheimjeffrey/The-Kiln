@@ -18,7 +18,7 @@ The principle of this is simple:
 To start, put this in your project.clj:
 
 ````clojure
-[kiln/kiln-ring "1.1.2"]
+[kiln/kiln-ring "1.2.0"]
 ````
 
 Your code can be as simple as this:

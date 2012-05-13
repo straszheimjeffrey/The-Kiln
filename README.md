@@ -22,7 +22,7 @@ The Kiln can help.
 If you use Leiningen, add this to your project.clj:
 
 ````clojure
-[kiln "1.1.2"]
+[kiln "1.2.0"]
 ````
 
 Kilns fire clays. A clay is a very simple sort of object. Here is one:

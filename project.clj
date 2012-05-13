@@ -1,4 +1,4 @@
-(defproject kiln "1.1.2"
+(defproject kiln "1.2.0"
   :description "A computational model for insanely complex functions"
   :dependencies [[org.clojure/clojure "1.3.0"]
                  [slingshot "0.10.2"]]
