@@ -40,7 +40,8 @@
   [stuff]
   (let [step (fn [session
                   {:keys [path params method tests]}]
-               (let [kiln (new-kiln)]
+               (let [kiln (new-kiln)
+                     path (if (fn? path) (path) path)]
                  (stoke-coal kiln request/request (assoc sample-request
                                                     :uri path
                                                     :request-method method
@@ -101,6 +102,35 @@
                 (let [[[_ id]] (re-seq #"/show-message/(\d+)" body)]
                   (is id)
                   (reset! store id)))}
+      {:path #(str "/show-message/" @store)
+       :method :get
+       :params nil
+       :tests (fn [{:keys [body]}]
+                (do
+                  (is (re-matches #"(?ms).*class=\"header\">header!.*" body))
+                  (is (re-matches #"(?ms).*class=\"body\">body!.*" body))))}
+      {:path #(str "/edit-message/" @store)
+       :method :get
+       :params nil
+       :tests (fn [{:keys [body]}]
+                (do
+                  (is (re-matches
+                       #"(?ms).*input[^>]*name=\"header\"[^>]*value=\"header!\".*"
+                       body))
+                  (is (re-matches
+                       #"(?ms).*<textarea.*>body!.*" body))))}
+      {:path #(str "/edit-message/" @store)
+       :method :post
+       :params {:header "fred" :body "mary"}
+       :tests #(is (-> % get-location :path (= (str "/show-message/" @store))))}
+      {:path #(str "/show-message/" @store)
+       :method :get
+       :params nil
+       :tests (do
+                (fn [{:keys [body]}]
+                  (is (re-matches #"(?ms).*class=\"header\">fred.*" body))
+                  (is (re-matches #"(?ms).*class=\"body\">mary.*" body))))}
+
       ])))
 
 
